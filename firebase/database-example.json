@@ -1,0 +1,153 @@
+{
+  "users": {
+    "FARMER_FIREBASE_UID": {
+      "role": "farmer",
+      "pondId": "pond-001",
+      "displayName": "Pond Operator"
+    },
+
+    "DEVICE_FIREBASE_UID": {
+      "role": "device",
+      "pondId": "pond-001",
+      "displayName": "Pond Controller"
+    }
+  },
+
+  "ponds": {
+    "pond-001": {
+      "name": "Smart Shrimp Pond 001",
+      "status": "critical",
+      "connected": true,
+      "lastSeenMs": 1786200100000,
+
+      "sensors": {
+        "ph": 7.4,
+        "do": 3.7,
+        "temperature": 30.1,
+        "waterLevel": 72,
+        "rain": false,
+        "ec": 19.1,
+        "salinity": 20.8
+      },
+
+      "devices": {
+        "aerator": true,
+        "drainagePump": false,
+        "dilutionPump": false,
+        "feeder": false,
+        "buzzer": true,
+        "warningBeacon": true
+      }
+    }
+  },
+
+  "settings": {
+    "pond-001": {
+      "mode": "automatic",
+
+      "thresholds": {
+        "ph": {
+          "normalMin": 7.5,
+          "normalMax": 8.5,
+          "warningLow": 7.5,
+          "warningHigh": 8.8
+        },
+
+        "do": {
+          "normalMin": 5.0,
+          "hypoxia": 4.0,
+          "critical": 3.5,
+          "recovery": 5.5,
+          "triggerDurationSec": 30
+        },
+
+        "temperature": {
+          "normalMin": 28,
+          "normalMax": 32,
+          "warningLow": 25,
+          "warningHigh": 33
+        },
+
+        "salinity": {
+          "normalMin": 10,
+          "normalMax": 25,
+          "warningLow": 5,
+          "warningHigh": 30
+        },
+
+        "waterLevel": {
+          "normalMin": 40,
+          "normalMax": 80,
+          "warningLow": 30,
+          "warningHigh": 90,
+          "overflowTriggerDurationSec": 10
+        }
+      },
+
+      "automation": {
+        "hypoxiaResponseEnabled": true,
+        "rainOverflowResponseEnabled": true,
+        "heatSalinityResponseEnabled": true
+      }
+    }
+  },
+
+  "commands": {
+    "pond-001": {
+      "cmd-001": {
+        "device": "aerator",
+        "action": "on",
+        "source": "manual",
+        "createdAtMs": 1786200060000,
+        "status": "completed",
+        "processedAtMs": 1786200061000
+      }
+    }
+  },
+
+  "telemetry": {
+    "pond-001": {
+      "1786200100000": {
+        "timestampMs": 1786200100000,
+        "ph": 7.4,
+        "do": 3.7,
+        "temperature": 30.1,
+        "waterLevel": 72,
+        "rain": false,
+        "ec": 19.1,
+        "salinity": 20.8
+      }
+    }
+  },
+
+  "alerts": {
+    "pond-001": {
+      "alert-001": {
+        "type": "hypoxia",
+        "severity": "critical",
+        "status": "active",
+        "message": "DO remained below 4.0 mg/L for 30 seconds.",
+
+        "measurements": {
+          "do": 3.7
+        },
+
+        "createdAtMs": 1786200100000,
+        "resolvedAtMs": null
+      }
+    }
+  },
+
+  "events": {
+    "pond-001": {
+      "event-001": {
+        "type": "device_action",
+        "source": "automatic",
+        "device": "aerator",
+        "action": "on",
+        "reason": "dissolved_oxygen_low",
+        "createdAtMs": 1786200101000
+      }
+    }
+  }
+}

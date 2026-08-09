@@ -1,16 +1,12 @@
-export type UserRole = "farmer" | "device";
+import type { OperatingMode, UserProfile } from "./pond";
 
-export interface FarmerProfile {
-  role: "farmer";
-  pondId: string;
-  displayName: string;
-}
+export type FarmerProfile = UserProfile & { role: "farmer" };
 
 export interface PondShellState {
   id: string;
   name: string;
   connected: boolean;
-  mode: "automatic" | "manual";
+  mode: OperatingMode;
 }
 
 export interface DashboardSession {

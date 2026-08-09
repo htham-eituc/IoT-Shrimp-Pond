@@ -12,8 +12,8 @@ Web Dashboard ↔ Firebase Realtime Database ↔ IoT / Wokwi
 
 ### Web
 - Node.js 20+ and npm
-- Phase 1 web app uses Vite + React + TypeScript with mock authentication only
-- Firebase Web SDK integration is planned for a later phase
+- Vite + React + TypeScript dashboard
+- Environment-selected `MockPondDataSource` or `FirebasePondDataSource`
 
 ### IoT
 - Wokwi account or Wokwi VS Code extension
@@ -75,9 +75,14 @@ npm install
 npm run dev
 ```
 
-Phase 1 implements only the dashboard foundation: reusable design tokens, mock
-authentication, the authenticated shell, header context, and responsive
-navigation. The mock login creates this farmer profile:
+Copy `web/.env.example` to `web/.env` when local configuration is needed. The
+default data mode is mock:
+
+```text
+VITE_DATA_MODE=mock
+```
+
+The mock login creates this farmer profile:
 
 ```json
 {
@@ -88,19 +93,19 @@ navigation. The mock login creates this farmer profile:
 ```
 
 Use `farmer@example.com` with any non-empty placeholder password. The mock app
-stores only the mock session, never the password.
+stores only a local authenticated marker, never the password.
 
-The web should:
+For Firebase mode, set `VITE_DATA_MODE=firebase` and provide every
+`VITE_FIREBASE_*` value listed in `web/.env.example`. Enable Email/Password in
+Firebase Authentication and provision `/users/{uid}` with a farmer role and
+pond assignment before signing in.
+
+The web data flow is:
 
 ```text
-Phase 1:
-Login with mock auth
-→ restore or clear the local mock session predictably
-→ show the assigned pond name, connection indicator, current mode, and navigation
-
-Later phases:
-Firebase login
+Login through the selected PondDataSource
 → read current user profile
+→ require role = farmer
 → subscribe to assigned pond data
 → receive real-time sensor, alert, command, and settings updates
 → create manual commands and wait for controller state feedback

@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AuthContext, type AuthContextValue, type AuthStatus } from "./AuthContext";
+import type { AuthenticatedUser } from "../domain";
 import type { DashboardSession } from "../domain/session";
 import type { PondDataSource } from "../data";
-import {
-  clearStoredSession,
-  createMockSession,
-  getMockEmailHint,
-  readStoredSession,
-  validateMockCredentials,
-  writeStoredSession,
-} from "./mockAuth";
 
 export function AuthProvider({ children, dataSource }: { children: ReactNode; dataSource: PondDataSource }) {
   const [status, setStatus] = useState<AuthStatus>("checking");
@@ -17,52 +10,42 @@ export function AuthProvider({ children, dataSource }: { children: ReactNode; da
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const storedSession = readStoredSession(window.localStorage);
-      if (!storedSession) {
-        setSession(null);
+    let active = true;
+    void dataSource
+      .restoreSession()
+      .then((user) => {
+        if (!active) return;
+        setSession(user ? createDashboardSession(user) : null);
         setStatus("ready");
-        return;
-      }
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setSession(null);
+        setError(reason instanceof Error ? reason.message : "Could not restore the dashboard session.");
+        setStatus("ready");
+      });
 
-      void dataSource
-        .signIn(getMockEmailHint(), "restored-session")
-        .then(() => {
-          setSession(storedSession);
-          setStatus("ready");
-        })
-        .catch(() => {
-          clearStoredSession(window.localStorage);
-          setSession(null);
-          setStatus("ready");
-        });
-    }, 180);
-
-    return () => window.clearTimeout(timer);
+    return () => {
+      active = false;
+    };
   }, [dataSource]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     setStatus("signing-in");
     setError(null);
-    await delay(260);
-
-    if (!validateMockCredentials(email, password)) {
+    try {
+      const user = await dataSource.signIn(email, password);
+      setSession(createDashboardSession(user));
+    } catch (reason) {
       setSession(null);
+      setError(reason instanceof Error ? reason.message : "Sign-in failed.");
+    } finally {
       setStatus("ready");
-      setError("Invalid mock login. Use the mock farmer account and any non-empty placeholder password.");
-      return;
     }
-
-    await dataSource.signIn(email, password);
-    const nextSession = createMockSession();
-    writeStoredSession(window.localStorage, nextSession);
-    setSession(nextSession);
-    setStatus("ready");
   }, [dataSource]);
 
   const signOut = useCallback(() => {
-    void dataSource.signOut();
-    clearStoredSession(window.localStorage);
+    void dataSource.signOut().catch(() => undefined);
     setSession(null);
     setStatus("ready");
     setError(null);
@@ -73,7 +56,7 @@ export function AuthProvider({ children, dataSource }: { children: ReactNode; da
       status,
       session,
       error,
-      emailHint: getMockEmailHint(),
+      emailHint: "",
       signIn,
       signOut,
     }),
@@ -83,8 +66,17 @@ export function AuthProvider({ children, dataSource }: { children: ReactNode; da
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-function delay(durationMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
+function createDashboardSession(user: AuthenticatedUser): DashboardSession {
+  if (user.profile.role !== "farmer") {
+    throw new Error("Only farmer accounts can open the dashboard.");
+  }
+  return {
+    profile: { ...user.profile, role: "farmer" },
+    pond: {
+      id: user.profile.pondId,
+      name: `Pond ${user.profile.pondId}`,
+      connected: false,
+      mode: "automatic",
+    },
+  };
 }

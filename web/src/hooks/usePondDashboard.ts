@@ -33,18 +33,22 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
 
   useEffect(() => {
     try {
+      const onSubscriptionError = (reason: Error) => {
+        setError(reason.message);
+        setLoading(false);
+      };
       const unsubscribes = [
-        dataSource.subscribePond(pondId, setPond),
-        dataSource.subscribeSettings(pondId, setSettings),
+        dataSource.subscribePond(pondId, setPond, onSubscriptionError),
+        dataSource.subscribeSettings(pondId, setSettings, onSubscriptionError),
         dataSource.subscribeAlerts(pondId, (nextAlerts) => {
           setAlerts(sortKeyedRecordsByCreatedAt(nextAlerts));
-        }),
+        }, onSubscriptionError),
         dataSource.subscribeEvents(pondId, (nextEvents) => {
           setEvents(sortKeyedRecordsByCreatedAt(nextEvents));
-        }),
+        }, onSubscriptionError),
         dataSource.subscribeCommands(pondId, (nextCommands) => {
           setCommands(sortKeyedRecordsByCreatedAt(nextCommands));
-        }),
+        }, onSubscriptionError),
       ];
 
       void dataSource

@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
-  Activity,
   BellRing,
   Circle,
   Gauge,
@@ -20,10 +19,13 @@ import { isDemoScenarioSource } from "../data";
 import { usePondDashboard } from "../hooks/usePondDashboard";
 import { createMetricViewModels } from "../presentation/metrics";
 import { ActiveAlertsPanel } from "./ActiveAlertsPanel";
+import { AlertsEventsView } from "./AlertsEventsView";
 import { DeviceControlPanel } from "./DeviceControlPanel";
 import { MetricCard } from "./MetricCard";
 import { PondVisualization } from "./PondVisualization";
+import { SettingsView } from "./SettingsView";
 import { StatusBadge } from "./StatusBadge";
+import { TelemetryHistoryView } from "./TelemetryHistoryView";
 
 type NavKey = "overview" | "realtime" | "control" | "history" | "settings" | "alerts";
 
@@ -231,13 +233,24 @@ function DashboardContent({
     );
   }
 
+  if (activeView === "history") {
+    return <TelemetryHistoryView records={dashboard.telemetry} loading={dashboard.loading} />;
+  }
+
+  if (activeView === "settings") {
+    if (!dashboard.settings) {
+      return <StatePanel title="Settings unavailable" description="No Firebase-shaped settings exist for this assigned pond." tone="warning" />;
+    }
+
+    return <SettingsView dataSource={dataSource} pondId={pondId} settings={dashboard.settings} />;
+  }
+
+  if (activeView === "alerts") {
+    return <AlertsEventsView alerts={dashboard.alerts} events={dashboard.events} />;
+  }
+
   return (
-    <div className="placeholder-view">
-      <Activity aria-hidden="true" />
-      <span className="eyebrow">{activeLabel}</span>
-      <h1>{activeLabel}</h1>
-      <p>This shell view remains available for the next phase.</p>
-    </div>
+    <StatePanel title={`${activeLabel} unavailable`} description="This dashboard view could not be selected." tone="warning" />
   );
 }
 

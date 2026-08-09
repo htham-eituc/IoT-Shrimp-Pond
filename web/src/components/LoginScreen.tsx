@@ -29,14 +29,14 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
           </span>
           <div>
             <strong>Smart Shrimp Pond</strong>
-            <span>Mock farmer access</span>
+            <span>Farmer access</span>
           </div>
         </div>
 
         <div className="auth-copy">
-          <span className="eyebrow">Phase 1 foundation</span>
+          <span className="eyebrow">Secure dashboard access</span>
           <h1 id="login-title">Sign in</h1>
-          <p>Use the mock farmer account. The password is only checked as a non-empty placeholder and is never stored.</p>
+          <p>Sign in with the farmer account configured for this dashboard environment. Passwords are handled by the active authentication provider and are never stored by the UI.</p>
         </div>
 
         <form className="login-form" onSubmit={(event) => void submit(event)} noValidate>

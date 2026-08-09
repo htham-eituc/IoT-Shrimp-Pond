@@ -4,9 +4,46 @@ import { MOCK_NOW_MS } from "./mockDatabase";
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("MockPondDataSource", () => {
+  it("restores an in-memory authenticated session through the shared interface", async () => {
+    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
+    expect(await source.restoreSession()).toBeNull();
+
+    const signedIn = await source.signIn("farmer@example.com", "placeholder");
+    expect(await source.restoreSession()).toEqual(signedIn);
+    source.dispose();
+  });
+
+  it("restores mock authentication predictably across fresh browser data-source instances", async () => {
+    const values = new Map<string, string>();
+    const localStorage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    } as unknown as Storage;
+    vi.stubGlobal("window", { localStorage });
+
+    const firstSource = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
+    await firstSource.signIn("farmer@example.com", "placeholder");
+
+    const restoredSource = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
+    expect((await restoredSource.restoreSession())?.profile).toEqual({
+      role: "farmer",
+      pondId: "pond-001",
+      displayName: "Pond Operator",
+    });
+
+    await restoredSource.signOut();
+    const signedOutSource = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
+    expect(await signedOutSource.restoreSession()).toBeNull();
+    firstSource.dispose();
+    restoredSource.dispose();
+    signedOutSource.dispose();
+  });
+
   it("signs in as the mock farmer and exposes pond-001", async () => {
     const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
     const user = await source.signIn("farmer@example.com", "placeholder");

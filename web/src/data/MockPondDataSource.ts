@@ -17,6 +17,7 @@ import { createMockPondDatabase } from "./mockDatabase";
 
 const FARMER_EMAIL = "farmer@example.com";
 const FARMER_UID = "mock-farmer-uid";
+const MOCK_AUTH_STORAGE_KEY = "smart-shrimp-pond.mock-authenticated.v1";
 
 type PondSubscriptionKey = "ponds" | "settings" | "alerts" | "events" | "commands";
 
@@ -30,6 +31,20 @@ export class MockPondDataSource implements PondDataSource {
   constructor(database: PondDatabaseRoot = createMockPondDatabase(), private readonly now: () => number = () => Date.now()) {
     this.database = clone(database);
     this.controller = new MockIoTController(this.database, now, () => this.emit());
+  }
+
+  async restoreSession(): Promise<AuthenticatedUser | null> {
+    if (this.currentUser) return clone(this.currentUser);
+    if (getBrowserStorage()?.getItem(MOCK_AUTH_STORAGE_KEY) !== "true") return null;
+
+    const profile = this.database.users[FARMER_UID];
+    if (!profile || profile.role !== "farmer") return null;
+    this.currentUser = {
+      uid: FARMER_UID,
+      email: FARMER_EMAIL,
+      profile: clone(profile),
+    };
+    return clone(this.currentUser);
   }
 
   async signIn(email: string, password: string): Promise<AuthenticatedUser> {
@@ -47,12 +62,14 @@ export class MockPondDataSource implements PondDataSource {
       email: FARMER_EMAIL,
       profile: clone(profile),
     };
+    getBrowserStorage()?.setItem(MOCK_AUTH_STORAGE_KEY, "true");
 
     return clone(this.currentUser);
   }
 
   async signOut(): Promise<void> {
     this.currentUser = null;
+    getBrowserStorage()?.removeItem(MOCK_AUTH_STORAGE_KEY);
   }
 
   getCurrentUser(): AuthenticatedUser | null {
@@ -241,4 +258,12 @@ function mergePondSettings(current: PondSettings, changes: DeepPartial<PondSetti
 
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+function getBrowserStorage(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
 }

@@ -28,8 +28,8 @@ export class MockPondDataSource implements PondDataSource {
   private currentUser: AuthenticatedUser | null = null;
   private commandSequence = 1;
 
-  constructor(database: PondDatabaseRoot = createMockPondDatabase(), private readonly now: () => number = () => Date.now()) {
-    this.database = clone(database);
+  constructor(database: PondDatabaseRoot | undefined = undefined, private readonly now: () => number = () => Date.now()) {
+    this.database = clone(database ?? createMockPondDatabase(now()));
     this.controller = new MockIoTController(this.database, now, () => this.emit());
   }
 

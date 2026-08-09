@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   BellRing,
   Circle,
@@ -18,6 +18,7 @@ import type { DemoScenario, PondDataSource } from "../data";
 import { isDemoScenarioSource } from "../data";
 import { usePondDashboard } from "../hooks/usePondDashboard";
 import { createMetricViewModels } from "../presentation/metrics";
+import { getConnectionPresentation } from "../presentation/connection";
 import { ActiveAlertsPanel } from "./ActiveAlertsPanel";
 import { AlertsEventsView } from "./AlertsEventsView";
 import { DeviceControlPanel } from "./DeviceControlPanel";
@@ -56,6 +57,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
   const [selectedScenario, setSelectedScenario] = useState<DemoScenario>("normal");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const dashboard = usePondDashboard(dataSource, session.profile.pondId);
+  const currentTimeMs = useCurrentTimeMs();
   const activeItem = NAV_ITEMS.find((item) => item.key === activeView) ?? NAV_ITEMS[0];
   const demoScenariosEnabled = isDemoScenarioSource(dataSource);
 
@@ -86,6 +88,8 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
 
   const pondName = dashboard.pond?.name ?? session.pond.name;
   const connected = dashboard.pond?.connected ?? session.pond.connected;
+  const lastSeenMs = dashboard.pond?.lastSeenMs ?? currentTimeMs;
+  const connection = getConnectionPresentation(connected, lastSeenMs ?? 0, currentTimeMs);
   const mode = dashboard.settings?.mode ?? session.pond.mode;
 
   return (
@@ -103,7 +107,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
 
         <div className="topbar-context" aria-label="Current pond context">
           <PondIdentity name={pondName} />
-          <StatusPill label={connected ? "Online" : "Offline"} tone={connected ? "normal" : "offline"} />
+          <StatusPill label={connection.label} tone={connection.tone} />
           <StatusPill label={titleCase(mode)} tone="info" />
           <div className="operator-chip">
             <UserRound aria-hidden="true" />
@@ -159,6 +163,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
             demoScenariosEnabled={demoScenariosEnabled}
             onScenarioChange={selectScenario}
             dashboard={dashboard}
+            currentTimeMs={currentTimeMs}
           />
         </section>
       </main>
@@ -175,6 +180,7 @@ function DashboardContent({
   demoScenariosEnabled,
   onScenarioChange,
   dashboard,
+  currentTimeMs,
 }: {
   dataSource: PondDataSource;
   pondId: string;
@@ -184,9 +190,10 @@ function DashboardContent({
   demoScenariosEnabled: boolean;
   onScenarioChange(scenario: DemoScenario): void;
   dashboard: ReturnType<typeof usePondDashboard>;
+  currentTimeMs: number | null;
 }) {
   if (dashboard.loading && !dashboard.pond) {
-    return <StatePanel title="Loading pond data" description="Opening mock Realtime Database subscriptions." tone="info" />;
+    return <StatePanel title="Loading pond data" description="Opening Realtime Database subscriptions." tone="info" />;
   }
 
   if (dashboard.error) {
@@ -194,7 +201,7 @@ function DashboardContent({
   }
 
   if (!dashboard.pond) {
-    return <StatePanel title="No pond data" description="No Firebase-shaped mock state exists for this assigned pond." tone="warning" />;
+    return <StatePanel title="No pond data" description="No pond state exists for this assigned pond." tone="warning" />;
   }
 
   if (activeView === "overview") {
@@ -206,6 +213,7 @@ function DashboardContent({
         selectedScenario={selectedScenario}
         demoScenariosEnabled={demoScenariosEnabled}
         onScenarioChange={onScenarioChange}
+        currentTimeMs={currentTimeMs}
       />
     );
   }
@@ -266,6 +274,7 @@ function OverviewView({
   selectedScenario,
   demoScenariosEnabled,
   onScenarioChange,
+  currentTimeMs,
 }: {
   pond: PondState;
   settingsMode: string;
@@ -273,9 +282,11 @@ function OverviewView({
   selectedScenario: DemoScenario;
   demoScenariosEnabled: boolean;
   onScenarioChange(scenario: DemoScenario): void;
+  currentTimeMs: number | null;
 }) {
   const activeAlerts = alerts.filter((alert) => alert.value.status === "active");
   const runningDevices = Object.values(pond.devices).filter(Boolean).length;
+  const connection = getConnectionPresentation(pond.connected, pond.lastSeenMs, currentTimeMs);
 
   return (
     <div className="view-stack">
@@ -291,7 +302,7 @@ function OverviewView({
       )}
 
       <section className="summary-grid summary-grid--overview" aria-label="Overview summary">
-        <SummaryCard label="Connection" value={pond.connected ? "Connected" : "Disconnected"} tone={pond.connected ? "normal" : "offline"} helper={`Last seen ${formatTimestamp(pond.lastSeenMs)}`} />
+        <SummaryCard label="Connection" value={connection.label} tone={connection.tone} helper={`Last seen ${formatTimestamp(pond.lastSeenMs)}`} />
         <SummaryCard label="Pond status" value={titleCase(pond.status)} tone={pond.status} />
         <SummaryCard label="Operating mode" value={titleCase(settingsMode)} tone="info" />
         <SummaryCard label="Active alerts" value={String(activeAlerts.length)} tone={activeAlerts.some((alert) => alert.value.severity === "critical") ? "critical" : activeAlerts.length > 0 ? "warning" : "normal"} />
@@ -300,6 +311,10 @@ function OverviewView({
 
       {!pond.connected && (
         <StatePanel title="Controller disconnected" description="The dashboard is showing the most recent reported pond state." tone="offline" />
+      )}
+
+      {connection.state === "stale" && (
+        <StatePanel title="Controller heartbeat is stale" description="The controller still reports connected, but its last-seen timestamp is older than 30 seconds. Values may be outdated." tone="warning" />
       )}
 
       <div className="overview-grid">
@@ -385,13 +400,26 @@ function PondIdentity({ name }: { name: string }) {
   );
 }
 
-function StatusPill({ label, tone }: { label: string; tone: "normal" | "info" | "offline" }) {
+function StatusPill({ label, tone }: { label: string; tone: "normal" | "warning" | "info" | "offline" }) {
   return (
     <span className={`status-pill status-pill--${tone}`}>
       <Circle aria-hidden="true" />
       {label}
     </span>
   );
+}
+
+function useCurrentTimeMs(): number | null {
+  const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    const updateClock = () => setCurrentTimeMs(Date.now());
+    queueMicrotask(updateClock);
+    const timer = window.setInterval(updateClock, 5_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return currentTimeMs;
 }
 
 function PageHeading({ eyebrow, title, description, trailing }: { eyebrow: string; title: string; description: string; trailing?: ReactNode }) {

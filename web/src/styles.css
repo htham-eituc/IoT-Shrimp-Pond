@@ -240,6 +240,12 @@ button:disabled {
   background: rgb(var(--rgb-normal) / 10%);
 }
 
+.status-pill--warning {
+  border-color: rgb(var(--rgb-warning) / 38%);
+  color: var(--color-warning);
+  background: rgb(var(--rgb-warning) / 8%);
+}
+
 .status-pill--offline {
   color: var(--color-offline);
   background: rgb(148 163 184 / 10%);

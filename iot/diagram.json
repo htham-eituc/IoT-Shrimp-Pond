@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "author": "Codex",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "potPh", "top": -130, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-potentiometer", "id": "potDo", "top": -40, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-potentiometer", "id": "potTemp", "top": 50, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-potentiometer", "id": "potLevel", "top": 140, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-slide-switch", "id": "rainSwitch", "top": 235, "left": -208, "attrs": {} },
+    { "type": "wokwi-led", "id": "ledAerator", "top": -120, "left": 220, "attrs": { "color": "green", "label": "Aerator" } },
+    { "type": "wokwi-led", "id": "ledDrainage", "top": -60, "left": 220, "attrs": { "color": "blue", "label": "Drainage" } },
+    { "type": "wokwi-led", "id": "ledDilution", "top": 0, "left": 220, "attrs": { "color": "cyan", "label": "Dilution" } },
+    { "type": "wokwi-led", "id": "ledFeeder", "top": 60, "left": 220, "attrs": { "color": "yellow", "label": "Feeder" } },
+    { "type": "wokwi-led", "id": "ledBuzzer", "top": 120, "left": 220, "attrs": { "color": "red", "label": "Buzzer" } },
+    { "type": "wokwi-led", "id": "ledBeacon", "top": 180, "left": 220, "attrs": { "color": "orange", "label": "Warning" } }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+
+    [ "potPh:GND", "esp:GND.1", "black", [] ],
+    [ "potPh:VCC", "esp:3V3", "red", [] ],
+    [ "potPh:SIG", "esp:34", "green", [] ],
+
+    [ "potDo:GND", "esp:GND.1", "black", [] ],
+    [ "potDo:VCC", "esp:3V3", "red", [] ],
+    [ "potDo:SIG", "esp:35", "green", [] ],
+
+    [ "potTemp:GND", "esp:GND.1", "black", [] ],
+    [ "potTemp:VCC", "esp:3V3", "red", [] ],
+    [ "potTemp:SIG", "esp:32", "green", [] ],
+
+    [ "potLevel:GND", "esp:GND.1", "black", [] ],
+    [ "potLevel:VCC", "esp:3V3", "red", [] ],
+    [ "potLevel:SIG", "esp:33", "green", [] ],
+
+    [ "rainSwitch:1", "esp:GND.1", "black", [] ],
+    [ "rainSwitch:2", "esp:25", "green", [] ],
+
+    [ "ledAerator:A", "esp:16", "green", [] ],
+    [ "ledAerator:C", "esp:GND.2", "black", [] ],
+    [ "ledDrainage:A", "esp:17", "blue", [] ],
+    [ "ledDrainage:C", "esp:GND.2", "black", [] ],
+    [ "ledDilution:A", "esp:18", "cyan", [] ],
+    [ "ledDilution:C", "esp:GND.2", "black", [] ],
+    [ "ledFeeder:A", "esp:19", "yellow", [] ],
+    [ "ledFeeder:C", "esp:GND.2", "black", [] ],
+    [ "ledBuzzer:A", "esp:21", "red", [] ],
+    [ "ledBuzzer:C", "esp:GND.2", "black", [] ],
+    [ "ledBeacon:A", "esp:22", "orange", [] ],
+    [ "ledBeacon:C", "esp:GND.2", "black", [] ]
+  ],
+  "serialMonitor": {
+    "display": "terminal"
+  }
+}

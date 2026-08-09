@@ -14,6 +14,9 @@
       section { margin-top: 1.5rem; padding: 1rem; border: 1px solid #8886; border-radius: .5rem; }
       pre { min-height: 2rem; padding: .75rem; overflow: auto; background: #8882; }
       .status { font-weight: 600; overflow-wrap: anywhere; }
+      select { font: inherit; padding: .5rem; }
+      canvas { display: block; max-width: 100%; background: #111827; }
+      .control-row { display: grid; grid-template-columns: 1fr auto auto; gap: .5rem; align-items: center; margin: .5rem 0; }
     </style>
   </head>
   <body>
@@ -44,6 +47,25 @@
       <h2>3. Live sensor data</h2>
       <p id="sensor-status" class="status">Sign in to start the sensor test.</p>
       <pre id="sensor-output">No sensor data received.</pre>
+    </section>
+
+    <section>
+      <h2>4. Mode and manual control</h2>
+      <label>Mode
+        <select id="mode-select" disabled>
+          <option value="automatic">Automatic</option>
+          <option value="manual">Manual</option>
+        </select>
+      </label>
+      <p id="mode-status" class="status">No mode loaded.</p>
+      <div id="device-controls"></div>
+      <pre id="device-output">No device state received.</pre>
+    </section>
+
+    <section>
+      <h2>5. Recent telemetry</h2>
+      <p id="telemetry-status" class="status">No telemetry loaded.</p>
+      <canvas id="telemetry-chart" width="720" height="260"></canvas>
     </section>
 
     <script type="module" src="/js/test.js"></script>

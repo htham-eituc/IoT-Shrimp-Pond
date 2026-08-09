@@ -1,0 +1,8 @@
+web/.env
+iot/secrets.h
+
+.pio/
+node_modules/
+dist/
+
+esp32-demo

@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShrimpIQ — Bảng điều khiển ao tôm thông minh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06202B;
+    --bg-panel:#0D2E3B;
+    --bg-panel-alt:#123B4A;
+    --bg-raised:#163F4E;
+    --border:rgba(255,255,255,0.08);
+    --border-soft:rgba(255,255,255,0.05);
+    --teal:#2FBFA0;
+    --teal-dim:rgba(47,191,160,0.15);
+    --amber:#E8A33D;
+    --amber-dim:rgba(232,163,61,0.15);
+    --coral:#F2563B;
+    --coral-dim:rgba(242,86,59,0.15);
+    --blue:#5FA8D3;
+    --blue-dim:rgba(95,168,211,0.15);
+    --text:#EAF4F2;
+    --text-muted:#7FA3A6;
+    --text-faint:#4E7378;
+    --radius:14px;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'IBM Plex Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(47,191,160,0.08), transparent),
+      radial-gradient(ellipse 700px 400px at 100% 0%, rgba(95,168,211,0.07), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--teal-dim); }
+  a{color:inherit;}
+
+  /* ---------- header ---------- */
+  header.topbar{
+    position:sticky; top:0; z-index:50;
+    background:rgba(6,32,43,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    padding:14px 28px;
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; margin-right:auto; }
+  .brand .mark{
+    width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(135deg, var(--teal), var(--blue));
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px;
+  }
+  .brand .name{ font-family:var(--font-display); font-weight:700; font-size:18px; letter-spacing:0.2px;}
+  .brand .sub{ font-size:11px; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:0.4px; text-transform:uppercase;}
+
+  .scenario-bar{ display:flex; gap:6px; background:var(--bg-panel); border:1px solid var(--border); border-radius:11px; padding:4px; }
+  .scenario-btn{
+    font-family:var(--font-body); font-size:12.5px; font-weight:500;
+    color:var(--text-muted); background:transparent; border:none; border-radius:8px;
+    padding:8px 12px; cursor:pointer; transition:all .18s ease; white-space:nowrap;
+  }
+  .scenario-btn:hover{ color:var(--text); }
+  .scenario-btn.active{ background:var(--bg-raised); color:var(--text); box-shadow: inset 0 0 0 1px var(--border);}
+  .scenario-btn .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; }
+
+  .header-right{ display:flex; align-items:center; gap:16px; }
+  .mode-toggle{ display:flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:12px; color:var(--text-muted);}
+  .switch{ position:relative; width:42px; height:24px; background:var(--bg-raised); border-radius:99px; cursor:pointer; border:1px solid var(--border); transition:.2s;}
+  .switch .knob{ position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:var(--text-muted); transition:.2s; }
+  .switch.on{ background:var(--teal-dim); border-color:var(--teal);}
+  .switch.on .knob{ left:20px; background:var(--teal); }
+  .clock{ font-family:var(--font-mono); font-size:13px; color:var(--text-muted); text-align:right; line-height:1.3;}
+  .clock b{ color:var(--text); display:block; font-size:14px;}
+
+  /* ---------- tabs ---------- */
+  nav.tabs{
+    display:flex; gap:4px; padding:10px 28px 0 28px; overflow-x:auto;
+    border-bottom:1px solid var(--border);
+  }
+  .tab-btn{
+    font-family:var(--font-body); font-weight:500; font-size:13.5px;
+    color:var(--text-muted); background:transparent; border:none;
+    padding:12px 16px; cursor:pointer; position:relative; white-space:nowrap;
+    display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+    border-bottom:2px solid transparent;
+  }
+  .tab-btn .t-sub{ font-size:10.5px; color:var(--text-faint); font-weight:400; }
+  .tab-btn:hover{ color:var(--text); }
+  .tab-btn.active{ color:var(--teal); border-bottom-color:var(--teal); }
+  .tab-btn.active .t-sub{ color:var(--teal); opacity:0.65; }
+
+  main{ max-width:1180px; margin:0 auto; padding:28px; }
+  .section{ display:none; animation:fadein .35s ease; }
+  .section.active{ display:block; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .section-head{ margin-bottom:20px; }
+  .section-head h1{ font-family:var(--font-display); font-size:22px; font-weight:600; }
+  .section-head p{ color:var(--text-muted); font-size:13.5px; margin-top:4px; }
+
+  /* ---------- generic panel ---------- */
+  .panel{ background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+  .grid{ display:grid; gap:16px; }
+  .grid-2{ grid-template-columns:1fr 1fr; }
+  .grid-3{ grid-template-columns:repeat(3, 1fr); }
+  .grid-6{ grid-template-columns:repeat(6, 1fr); }
+  @media(max-width:900px){ .grid-2, .grid-3, .grid-6{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:560px){ .grid-2, .grid-3, .grid-6{ grid-template-columns:1fr; } }
+
+  /* ---------- overview status strip ---------- */
+  .status-strip{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
+  .status-chip{
+    display:flex; align-items:center; gap:10px; background:var(--bg-panel);
+    border:1px solid var(--border); border-radius:11px; padding:12px 16px; flex:1; min-width:180px;
+  }
+  .status-chip .icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .status-chip .label{ font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px;}
+  .status-chip .value{ font-family:var(--font-mono); font-weight:600; font-size:15px; }
+
+  /* ---------- pond visualization ---------- */
+  .pond-wrap{ display:grid; grid-template-columns:1.3fr 1fr; gap:18px; }
+  @media(max-width:900px){ .pond-wrap{ grid-template-columns:1fr; } }
+  .pond-panel{ padding:0; overflow:hidden; }
+  .pond-panel .ph{ padding:18px 20px 0 20px; display:flex; justify-content:space-between; align-items:center;}
+  .pond-panel h3{ font-family:var(--font-display); font-size:15px; font-weight:600;}
+  .pond-svg-wrap{ padding:6px 12px 14px 12px; }
+  .scenario-label{ font-family:var(--font-mono); font-size:11px; padding:4px 10px; border-radius:99px; }
+
+  .alert-feed{ display:flex; flex-direction:column; gap:10px; }
+  .alert-item{ display:flex; gap:10px; padding:12px; border-radius:10px; background:var(--bg-panel-alt); border:1px solid var(--border-soft); }
+  .alert-item .abar{ width:3px; border-radius:3px; flex-shrink:0; }
+  .alert-item .atitle{ font-size:13px; font-weight:600; margin-bottom:2px;}
+  .alert-item .adesc{ font-size:12px; color:var(--text-muted); line-height:1.4;}
+  .alert-item .atime{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint); margin-top:4px;}
+  .empty-note{ color:var(--text-faint); font-size:12.5px; font-style:italic; padding:8px 2px;}
+
+  /* ---------- metric cards (realtime) ---------- */
+  .metric-card{ display:flex; flex-direction:column; gap:10px; }
+  .metric-card .mtop{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .metric-card .micon{ width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;}
+  .metric-card .mname{ font-size:12.5px; color:var(--text-muted); font-weight:500;}
+  .metric-card .mval{ font-family:var(--font-mono); font-size:30px; font-weight:600; line-height:1; letter-spacing:-0.5px;}
+  .metric-card .munit{ font-size:13px; color:var(--text-muted); font-weight:400; margin-left:3px;}
+  .metric-card .mrange{ font-size:11px; color:var(--text-faint); font-family:var(--font-mono);}
+  .mstatus{ font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:99px; letter-spacing:.3px; text-transform:uppercase;}
+  canvas.spark{ width:100%; height:38px; display:block; }
+
+  /* ---------- control toggles ---------- */
+  .ctrl-card{ display:flex; flex-direction:column; gap:14px; }
+  .ctrl-top{ display:flex; justify-content:space-between; align-items:flex-start;}
+  .ctrl-icon{ width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;}
+  .ctrl-name{ font-family:var(--font-display); font-weight:600; font-size:14.5px; }
+  .ctrl-desc{ font-size:12px; color:var(--text-muted); margin-top:2px; line-height:1.4;}
+  .ctrl-state{ font-family:var(--font-mono); font-size:12px; color:var(--text-muted); }
+  .ctrl-state b{ color:var(--text); }
+  .segmented{ display:flex; background:var(--bg-panel-alt); border-radius:9px; padding:3px; gap:3px;}
+  .segmented button{ flex:1; background:transparent; border:none; color:var(--text-muted); font-family:var(--font-body); font-size:12px; padding:7px 6px; border-radius:7px; cursor:pointer; font-weight:500;}
+  .segmented button.on{ background:var(--bg-raised); color:var(--teal); box-shadow:inset 0 0 0 1px var(--border);}
+  .segmented button:disabled{ cursor:not-allowed; opacity:.55; }
+  .auto-banner{ display:flex; align-items:center; gap:8px; background:var(--teal-dim); border:1px solid rgba(47,191,160,0.3); color:var(--teal); font-size:12px; padding:10px 14px; border-radius:10px; margin-bottom:16px;}
+
+  /* ---------- charts ---------- */
+  .chart-card{ display:flex; flex-direction:column; gap:10px; }
+  .chart-head{ display:flex; justify-content:space-between; align-items:center;}
+  .chart-head .cname{ font-weight:600; font-size:13.5px; }
+  .chart-head .cnow{ font-family:var(--font-mono); font-size:13px; }
+  .legend{ display:flex; gap:14px; font-size:11px; color:var(--text-muted); }
+  .legend span{ display:flex; align-items:center; gap:5px;}
+  .legend i{ width:8px; height:8px; border-radius:50%; display:inline-block;}
+  canvas.bigchart{ width:100%; height:170px; display:block; }
+
+  /* ---------- thresholds ---------- */
+  .thresh-card{ display:flex; flex-direction:column; gap:12px; }
+  .thresh-top{ display:flex; justify-content:space-between; align-items:baseline;}
+  .thresh-top .tname{ font-weight:600; font-size:13.5px;}
+  .thresh-top .tval{ font-family:var(--font-mono); font-size:16px; color:var(--teal); font-weight:600;}
+  input[type=range]{ width:100%; accent-color:var(--teal); height:4px; cursor:pointer;}
+  .thresh-scale{ display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10px; color:var(--text-faint);}
+  .thresh-note{ font-size:11.5px; color:var(--text-muted); line-height:1.4; }
+  .save-row{ display:flex; justify-content:flex-end; margin-top:20px; gap:10px; align-items:center;}
+  .btn-primary{ background:var(--teal); color:#06231C; border:none; font-family:var(--font-body); font-weight:600; font-size:13px; padding:11px 20px; border-radius:9px; cursor:pointer; }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-ghost{ background:transparent; border:1px solid var(--border); color:var(--text-muted); font-size:13px; padding:11px 16px; border-radius:9px; cursor:pointer;}
+
+  /* ---------- alert history table ---------- */
+  table.alert-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.alert-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--text-faint); font-weight:600; padding:0 12px 10px 12px; border-bottom:1px solid var(--border);}
+  table.alert-table td{ padding:12px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
+  table.alert-table tr:last-child td{ border-bottom:none;}
+  table.alert-table .ttime{ font-family:var(--font-mono); color:var(--text-muted); white-space:nowrap; font-size:12px;}
+  .tag{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:99px;}
+  .tag i{ width:6px; height:6px; border-radius:50%;}
+  .filter-row{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+  .filter-chip{ font-size:12px; color:var(--text-muted); background:var(--bg-panel-alt); border:1px solid var(--border); padding:7px 13px; border-radius:99px; cursor:pointer;}
+  .filter-chip.active{ color:var(--text); border-color:var(--teal); background:var(--teal-dim);}
+
+  /* toast */
+  #toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg-raised); border:1px solid var(--teal); color:var(--text); font-size:13px; padding:12px 20px; border-radius:10px; opacity:0; pointer-events:none; transition:all .25s ease; z-index:100; display:flex; align-items:center; gap:8px;}
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  footer{ text-align:center; padding:30px 20px 40px; color:var(--text-faint); font-size:11.5px; font-family:var(--font-mono);}
+
+  /* paddlewheel + pond svg animation */
+  .paddle{ transform-origin:center; animation:spin 4s linear infinite; }
+  .paddle.speed-low{ animation-duration:5s; }
+  .paddle.speed-high{ animation-duration:1.1s; }
+  .paddle.speed-off{ animation-play-state:paused; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .bubble{ animation:rise 2.8s ease-in infinite; opacity:0; }
+  @keyframes rise{ 0%{ transform:translateY(0); opacity:0;} 15%{opacity:.7;} 100%{ transform:translateY(-70px); opacity:0;} }
+  .pulse-dot{ animation:pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+  .flow-dash{ stroke-dasharray:6 5; animation:flow 0.7s linear infinite; }
+  @keyframes flow{ to{ stroke-dashoffset:-11; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">🦐</div>
+    <div>
+      <div class="name">Smart Shrimp Pond</div>
+      <div class="sub">Ao tôm thông minh · Demo</div>
+    </div>
+  </div>
+
+  <div class="scenario-bar" id="scenarioBar"></div>
+
+  <div class="header-right">
+    <div class="mode-toggle">
+      <span id="modeLabel">Chế độ: TỰ ĐỘNG</span>
+      <div class="switch on" id="modeSwitch"><div class="knob"></div></div>
+    </div>
+    <div class="clock"><b id="clockTime">14:20:00</b><span id="clockDate">Ao 3 · Nhóm 9</span></div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabBar"></nav>
+
+<main>
+
+  <!-- 1. TỔNG QUAN -->
+  <section class="section" id="sec-overview">
+    <div class="section-head">
+      <h1>Tổng quan</h1>
+      <p>Trạng thái hệ thống, chế độ vận hành và cảnh báo đang hoạt động.</p>
+    </div>
+
+    <div class="status-strip" id="statusStrip"></div>
+
+    <div class="pond-wrap">
+      <div class="panel pond-panel">
+        <div class="ph">
+          <h3>Mặt cắt ao — trực quan hoá thời gian thực</h3>
+          <span class="scenario-label" id="pondScenarioLabel">Bình thường</span>
+        </div>
+        <div class="pond-svg-wrap">
+          <svg viewBox="0 0 620 300" id="pondSvg" style="width:100%; height:auto;">
+            <defs>
+              <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#3a8fae"/>
+                <stop offset="100%" stop-color="#0d3a4d"/>
+              </linearGradient>
+              <linearGradient id="acidGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#c98a4a" stop-opacity="0.85"/>
+                <stop offset="100%" stop-color="#c98a4a" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- pond banks -->
+            <path d="M30 90 L100 60 L520 60 L590 90 L590 260 L30 260 Z" fill="#173347" stroke="#1f4256" stroke-width="2"/>
+            <!-- water body -->
+            <rect id="waterRect" x="50" y="110" width="520" height="140" rx="4" fill="url(#waterGrad)"/>
+            <!-- acidic surface layer (rain scenario) -->
+            <rect id="acidLayer" x="50" y="110" width="520" height="26" fill="url(#acidGrad)" opacity="0"/>
+            <!-- water level line label -->
+            <line id="levelLine" x1="50" y1="110" x2="570" y2="110" stroke="#8fd8ea" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.6"/>
+
+            <!-- bubbles -->
+            <g id="bubbleGroup" fill="#bfe8e0" opacity="0.8">
+              <circle class="bubble" cx="180" cy="235" r="3" style="animation-delay:0s"/>
+              <circle class="bubble" cx="195" cy="240" r="2" style="animation-delay:.6s"/>
+              <circle class="bubble" cx="430" cy="235" r="3" style="animation-delay:.3s"/>
+              <circle class="bubble" cx="445" cy="242" r="2" style="animation-delay:.9s"/>
+              <circle class="bubble" cx="310" cy="238" r="2.5" style="animation-delay:1.2s"/>
+            </g>
+
+            <!-- paddlewheel -->
+            <g transform="translate(150,120)">
+              <circle r="3" fill="#0a2a36" stroke="#3a5a68"/>
+              <g class="paddle speed-low" id="paddle1">
+                <rect x="-2" y="-22" width="4" height="44" fill="#5FA8D3"/>
+                <rect x="-22" y="-2" width="44" height="4" fill="#5FA8D3"/>
+                <rect x="-16" y="-16" width="4" height="32" fill="#5FA8D3" transform="rotate(45)"/>
+                <rect x="-16" y="-16" width="32" height="4" fill="#5FA8D3" transform="rotate(45)"/>
+              </g>
+            </g>
+            <g transform="translate(470,120)">
+              <circle r="3" fill="#0a2a36" stroke="#3a5a68"/>
+              <g class="paddle speed-low" id="paddle2">
+                <rect x="-2" y="-22" width="4" height="44" fill="#5FA8D3"/>
+                <rect x="-22" y="-2" width="44" height="4" fill="#5FA8D3"/>
+                <rect x="-16" y="-16" width="4" height="32" fill="#5FA8D3" transform="rotate(45)"/>
+                <rect x="-16" y="-16" width="32" height="4" fill="#5FA8D3" transform="rotate(45)"/>
+              </g>
+            </g>
+
+            <!-- sensor probes -->
+            <g id="probes" font-family="IBM Plex Mono" font-size="9" fill="#7FA3A6">
+              <line x1="240" y1="70" x2="240" y2="112" stroke="#3a5a68" stroke-width="2"/>
+              <circle class="pulse-dot" id="probeDO" cx="240" cy="112" r="5" fill="#2FBFA0"/>
+              <text x="240" y="55" text-anchor="middle" fill="#EAF4F2">DO</text>
+
+              <line x1="300" y1="70" x2="300" y2="112" stroke="#3a5a68" stroke-width="2"/>
+              <circle class="pulse-dot" id="probePH" cx="300" cy="112" r="5" fill="#2FBFA0"/>
+              <text x="300" y="55" text-anchor="middle" fill="#EAF4F2">pH</text>
+
+              <line x1="360" y1="70" x2="360" y2="112" stroke="#3a5a68" stroke-width="2"/>
+              <circle class="pulse-dot" id="probeTemp" cx="360" cy="112" r="5" fill="#2FBFA0"/>
+              <text x="360" y="55" text-anchor="middle" fill="#EAF4F2">T°</text>
+            </g>
+
+            <!-- rain -->
+            <g id="rainGroup" stroke="#5FA8D3" stroke-width="2" opacity="0" stroke-linecap="round">
+              <line x1="120" y1="10" x2="112" y2="35"/>
+              <line x1="170" y1="5" x2="162" y2="30"/>
+              <line x1="230" y1="15" x2="222" y2="40"/>
+              <line x1="300" y1="8" x2="292" y2="33"/>
+              <line x1="380" y1="12" x2="372" y2="37"/>
+              <line x1="450" y1="6" x2="442" y2="31"/>
+              <line x1="500" y1="14" x2="492" y2="39"/>
+            </g>
+
+            <!-- sun (heat) -->
+            <g id="sunGroup" opacity="0" transform="translate(555,35)">
+              <circle r="14" fill="#E8A33D"/>
+              <g stroke="#E8A33D" stroke-width="2" stroke-linecap="round">
+                <line x1="0" y1="-22" x2="0" y2="-28"/>
+                <line x1="0" y1="22" x2="0" y2="28"/>
+                <line x1="-22" y1="0" x2="-28" y2="0"/>
+                <line x1="22" y1="0" x2="28" y2="0"/>
+                <line x1="15.5" y1="-15.5" x2="19.8" y2="-19.8"/>
+                <line x1="-15.5" y1="15.5" x2="-19.8" y2="19.8"/>
+                <line x1="15.5" y1="15.5" x2="19.8" y2="19.8"/>
+                <line x1="-15.5" y1="-15.5" x2="-19.8" y2="-19.8"/>
+              </g>
+            </g>
+
+            <!-- moon (night) -->
+            <g id="moonGroup" opacity="0" transform="translate(555,35)">
+              <path d="M8,-12 A13,13 0 1 0 8,12 A10,10 0 1 1 8,-12 Z" fill="#c9d6e0"/>
+            </g>
+
+            <!-- intake pump (right side, heat scenario) -->
+            <g id="intakeGroup" opacity="0">
+              <rect x="580" y="150" width="18" height="30" rx="3" fill="#163F4E" stroke="#5FA8D3"/>
+              <text x="589" y="192" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5FA8D3">BƠM CẤP</text>
+              <line class="flow-dash" x1="580" y1="165" x2="572" y2="165" stroke="#5FA8D3" stroke-width="2"/>
+            </g>
+
+            <!-- surface discharge pump (left side, rain scenario) -->
+            <g id="drainGroup" opacity="0">
+              <rect x="22" y="115" width="18" height="26" rx="3" fill="#163F4E" stroke="#E8A33D"/>
+              <text x="31" y="153" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#E8A33D">BƠM XẢ</text>
+              <line class="flow-dash" x1="40" y1="126" x2="50" y2="126" stroke="#E8A33D" stroke-width="2"/>
+            </g>
+
+            <!-- water level text -->
+            <text x="580" y="256" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="#7FA3A6" id="levelLabel">Mực nước: 82%</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 style="font-family:var(--font-display); font-size:15px; margin-bottom:14px;">Cảnh báo đang hoạt động</h3>
+        <div class="alert-feed" id="activeAlerts"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. GIÁM SÁT THỜI GIAN THỰC -->
+  <section class="section" id="sec-realtime">
+    <div class="section-head">
+      <h1>Giám sát thời gian thực</h1>
+      <p>pH, DO, nhiệt độ, mực nước, mưa, EC — cập nhật mỗi vài giây từ cảm biến.</p>
+    </div>
+    <div class="grid grid-3" id="metricGrid"></div>
+  </section>
+
+  <!-- 3. ĐIỀU KHIỂN TỪ XA -->
+  <section class="section" id="sec-control">
+    <div class="section-head">
+      <h1>Điều khiển từ xa</h1>
+      <p>Sục khí, bơm, máy cho ăn — điều khiển thủ công hoặc để hệ thống tự động xử lý.</p>
+    </div>
+    <div class="auto-banner" id="autoBanner">⚙ Đang ở chế độ Tự động — hệ thống tự điều chỉnh thiết bị theo cảm biến. Chuyển sang Thủ công ở góc trên để can thiệp trực tiếp.</div>
+    <div class="grid grid-2" id="controlGrid"></div>
+  </section>
+
+  <!-- 4. BIỂU ĐỒ LỊCH SỬ -->
+  <section class="section" id="sec-history">
+    <div class="section-head">
+      <h1>Biểu đồ lịch sử</h1>
+      <p>Xu hướng 24 giờ qua và bối cảnh quanh các lần cảnh báo.</p>
+    </div>
+    <div class="grid grid-2" id="chartGrid"></div>
+  </section>
+
+  <!-- 5. CÀI ĐẶT NGƯỠNG -->
+  <section class="section" id="sec-thresholds">
+    <div class="section-head">
+      <h1>Cài đặt ngưỡng</h1>
+      <p>Điều chỉnh giới hạn để kiểm thử các luồng xử lý tự động. Thay đổi chỉ áp dụng cho phiên demo này.</p>
+    </div>
+    <div class="grid grid-3" id="threshGrid"></div>
+    <div class="save-row">
+      <button class="btn-ghost" id="resetThresh">Khôi phục mặc định</button>
+      <button class="btn-primary" id="saveThresh">Lưu ngưỡng</button>
+    </div>
+  </section>
+
+  <!-- 6. LỊCH SỬ CẢNH BÁO -->
+  <section class="section" id="sec-alertlog">
+    <div class="section-head">
+      <h1>Lịch sử cảnh báo</h1>
+      <p>Thời gian, hành động hệ thống đã thực hiện và trạng thái xử lý.</p>
+    </div>
+    <div class="panel">
+      <div class="filter-row" id="alertFilters"></div>
+      <table class="alert-table">
+        <thead><tr><th>Thời gian</th><th>Loại cảnh báo</th><th>Hành động hệ thống</th><th>Trạng thái</th></tr></thead>
+        <tbody id="alertTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>ShrimpIQ Demo · Dữ liệu mô phỏng, không kết nối cảm biến thật · Vật lý cho Công nghệ Thông tin — Nhóm 9</footer>
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA MODEL
+   ============================================================ */
+const COLORS = { teal:'#2FBFA0', amber:'#E8A33D', coral:'#F2563B', blue:'#5FA8D3' };
+
+const THRESH_DEFAULTS = {
+  doMin:{ label:'DO tối thiểu (nguy cơ thiếu oxy)', unit:'mg/L', min:2, max:6, step:0.1, val:4.0 },
+  doRestore:{ label:'DO khôi phục (an toàn trở lại)', unit:'mg/L', min:4, max:8, step:0.1, val:5.5 },
+  phMin:{ label:'pH tối thiểu (axit hoá)', unit:'', min:4, max:7, step:0.1, val:6.0 },
+  tempMax:{ label:'Nhiệt độ tối đa', unit:'°C', min:30, max:38, step:0.5, val:33 },
+  ecMax:{ label:'Độ mặn tối đa (EC)', unit:'ppt', min:20, max:40, step:1, val:30 },
+  rainTrigger:{ label:'Ngưỡng kích hoạt bơm xả', unit:'mm/h', min:5, max:40, step:1, val:20 },
+};
+let thresh = JSON.parse(JSON.stringify(THRESH_DEFAULTS));
+
+const METRICS = [
+  { key:'ph',   name:'Độ pH',        unit:'',     icon:'ph',   min:5, max:9,  decimals:2 },
+  { key:'do',   name:'Oxy hoà tan',  unit:'mg/L', icon:'do',   min:2, max:8,  decimals:1 },
+  { key:'temp', name:'Nhiệt độ',     unit:'°C',   icon:'temp', min:24, max:38, decimals:1 },
+  { key:'level',name:'Mực nước',     unit:'%',    icon:'level',min:40, max:100, decimals:0 },
+  { key:'rain', name:'Lượng mưa',    unit:'mm/h', icon:'rain', min:0, max:40,  decimals:0 },
+  { key:'ec',   name:'Độ mặn (EC)',  unit:'ppt',  icon:'ec',   min:5, max:38,  decimals:1 },
+];
+
+const SCENARIOS = {
+  normal:{ label:'Bình thường', color:COLORS.teal, timeLabel:'14:20',
+    target:{ ph:7.8, do:6.2, temp:29.5, level:82, rain:0, ec:18 },
+    paddle:'low', pumpDrain:false, pumpIntake:false, feeder:'scheduled',
+    alert:null },
+  rain:{ label:'Mưa lớn', color:COLORS.blue, timeLabel:'16:45',
+    target:{ ph:5.6, do:6.0, temp:26.0, level:96, rain:32, ec:13 },
+    paddle:'high', pumpDrain:true, pumpIntake:false, feeder:'scheduled',
+    alert:{ type:'Mưa lớn & axit hoá', desc:'pH bề mặt giảm dưới 6.0, phân tầng nguy cơ. Bơm xả mặt + sục khí tối đa đã kích hoạt. Đã gửi email nhắc chuẩn bị vôi CaCO₃.', level:'coral' } },
+  heat:{ label:'Nắng nóng', color:COLORS.amber, timeLabel:'12:30',
+    target:{ ph:7.6, do:5.0, temp:34.5, level:74, rain:0, ec:32 },
+    paddle:'low', pumpDrain:false, pumpIntake:true, feeder:'suspended',
+    alert:{ type:'Nhiệt độ & độ mặn cao', desc:'Nhiệt độ > 33°C kèm EC tăng > 30 ppt gây stress thẩm thấu. Bơm cấp nước pha loãng từ ao lắng đã kích hoạt, giảm cho ăn.', level:'amber' } },
+  night:{ label:'Ban đêm — thiếu oxy', color:COLORS.coral, timeLabel:'03:10',
+    target:{ ph:7.5, do:3.6, temp:27.0, level:80, rain:0, ec:19 },
+    paddle:'high', pumpDrain:false, pumpIntake:false, feeder:'off',
+    alert:{ type:'Thiếu oxy ban đêm', desc:'DO giảm dưới 4.0 mg/L do hô hấp tảo (02:00–05:00). Đã tắt máy cho ăn, bật sục khí công suất tối đa để phục hồi DO > 5.5 mg/L.', level:'coral' } },
+};
+let currentScenario = 'normal';
+let autoMode = true;
+
+// live values that drift toward the scenario target
+let live = Object.assign({}, SCENARIOS.normal.target);
+let history = {}; // sparklines, 20 pts each
+METRICS.forEach(m=>{ history[m.key] = Array.from({length:20}, ()=> live[m.key]); });
+
+let alertLog = [
+  { time:'Hôm qua 03:12', type:'Thiếu oxy ban đêm', action:'Tắt cho ăn, bật sục khí tối đa', status:'Đã xử lý', level:'coral' },
+  { time:'Hôm qua 12:40', type:'Nhiệt độ & độ mặn cao', action:'Bật bơm cấp nước pha loãng', status:'Đã xử lý', level:'amber' },
+  { time:'2 ngày trước 16:20', type:'Mưa lớn & axit hoá', action:'Bơm xả mặt + gửi email nhắc vôi CaCO₃', status:'Đã xử lý', level:'coral' },
+  { time:'3 ngày trước 03:05', type:'Thiếu oxy ban đêm', action:'Tắt cho ăn, bật sục khí tối đa', status:'Đã xử lý', level:'coral' },
+  { time:'3 ngày trước 11:55', type:'Nhiệt độ & độ mặn cao', action:'Giảm khẩu phần cho ăn 40%', status:'Đã xử lý', level:'amber' },
+  { time:'4 ngày trước 17:02', type:'Mưa lớn & axit hoá', action:'Bơm xả mặt, phá tầng bằng sục khí', status:'Đã xử lý', level:'coral' },
+  { time:'5 ngày trước 04:00', type:'DO thấp gần ngưỡng', action:'Tăng tốc độ sục khí', status:'Theo dõi', level:'amber' },
+];
+
+/* ============================================================
+   ICONS (small inline svg paths)
+   ============================================================ */
+function icon(name, size=18, color='currentColor'){
+  const p = {
+    ph:`<circle cx="12" cy="12" r="8"/><path d="M9 12h6M12 9v6" stroke-linecap="round"/>`,
+    do:`<path d="M12 4c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11Z"/>`,
+    temp:`<rect x="10" y="4" width="4" height="11" rx="2"/><circle cx="12" cy="17" r="3"/>`,
+    level:`<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 13h16" stroke-linecap="round"/>`,
+    rain:`<path d="M7 15a4 4 0 0 1 .5-8 5 5 0 0 1 9.6 1.6A3.5 3.5 0 0 1 17 15H7Z"/><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2" stroke-linecap="round"/>`,
+    ec:`<path d="M4 12h4l2-6 4 12 2-6h4" stroke-linecap="round" stroke-linejoin="round"/>`,
+    aerator:`<circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2 19 19M19 5l-2.8 2.8M7.8 16.2 5 19" stroke-linecap="round"/>`,
+    pumpDrain:`<path d="M4 12h9" stroke-linecap="round"/><path d="M13 12l-3-3M13 12l-3 3" stroke-linecap="round" stroke-linejoin="round"/><rect x="15" y="6" width="6" height="12" rx="2"/>`,
+    pumpIntake:`<path d="M20 12h-9" stroke-linecap="round"/><path d="M11 12l3-3M11 12l3 3" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="6" width="6" height="12" rx="2"/>`,
+    feeder:`<path d="M12 3v6M8 6l4 3 4-3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12h12l-1.5 8h-9L6 12Z"/>`,
+    bolt:`<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/>`,
+    check:`<path d="M4 12l5 5L20 6" stroke-linecap="round" stroke-linejoin="round"/>`,
+    mail:`<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8">${p[name]||''}</svg>`;
+}
+
+function statusOf(key, val){
+  if(key==='ph') return val < thresh.phMin.val ? 'coral' : (val < thresh.phMin.val+0.5 ? 'amber' : 'teal');
+  if(key==='do') return val < thresh.doMin.val ? 'coral' : (val < thresh.doRestore.val ? 'amber' : 'teal');
+  if(key==='temp') return val > thresh.tempMax.val ? 'coral' : (val > thresh.tempMax.val-2 ? 'amber' : 'teal');
+  if(key==='ec') return val > thresh.ecMax.val ? 'coral' : (val > thresh.ecMax.val-4 ? 'amber' : 'teal');
+  if(key==='rain') return val > thresh.rainTrigger.val ? 'blue' : 'teal';
+  if(key==='level') return val > 95 ? 'amber' : 'teal';
+  return 'teal';
+}
+const statusText = { teal:'Bình thường', amber:'Theo dõi', coral:'Cảnh báo', blue:'Mưa lớn' };
+
+/* ============================================================
+   HEADER: scenario buttons + tabs
+   ============================================================ */
+const scenarioBar = document.getElementById('scenarioBar');
+Object.entries(SCENARIOS).forEach(([key, s])=>{
+  const btn = document.createElement('button');
+  btn.className = 'scenario-btn' + (key===currentScenario ? ' active':'');
+  btn.dataset.key = key;
+  btn.innerHTML = `<span class="dot" style="background:${s.color}"></span>${s.label}`;
+  btn.onclick = ()=> setScenario(key);
+  scenarioBar.appendChild(btn);
+});
+
+const TABS = [
+  { key:'overview', label:'Tổng quan', sub:'trạng thái, chế độ, cảnh báo' },
+  { key:'realtime', label:'Giám sát thời gian thực', sub:'pH, DO, nhiệt độ, mực nước, mưa, EC' },
+  { key:'control', label:'Điều khiển từ xa', sub:'sục khí, bơm, máy cho ăn' },
+  { key:'history', label:'Biểu đồ lịch sử', sub:'xu hướng và bối cảnh cảnh báo' },
+  { key:'thresholds', label:'Cài đặt ngưỡng', sub:'điều chỉnh giới hạn để kiểm thử' },
+  { key:'alertlog', label:'Lịch sử cảnh báo', sub:'thời gian, hành động, trạng thái' },
+];
+const tabBar = document.getElementById('tabBar');
+TABS.forEach((t,i)=>{
+  const btn = document.createElement('button');
+  btn.className = 'tab-btn' + (i===0 ? ' active':'');
+  btn.dataset.key = t.key;
+  btn.innerHTML = `${t.label}<span class="t-sub">${t.sub}</span>`;
+  btn.onclick = ()=> setTab(t.key);
+  tabBar.appendChild(btn);
+});
+function setTab(key){
+  document.querySelectorAll('.tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.key===key));
+  document.querySelectorAll('.section').forEach(s=> s.classList.toggle('active', s.id==='sec-'+key));
+}
+setTab('overview');
+
+/* mode switch */
+const modeSwitch = document.getElementById('modeSwitch');
+modeSwitch.onclick = ()=>{
+  autoMode = !autoMode;
+  modeSwitch.classList.toggle('on', autoMode);
+  document.getElementById('modeLabel').textContent = 'Chế độ: ' + (autoMode? 'TỰ ĐỘNG':'THỦ CÔNG');
+  renderControls();
+  showToast(autoMode? 'Đã chuyển sang chế độ Tự động' : 'Đã chuyển sang chế độ Thủ công — bạn có thể điều khiển thiết bị trực tiếp');
+};
+
+/* clock */
+function tickClock(){
+  const s = SCENARIOS[currentScenario];
+  document.getElementById('clockTime').textContent = s.timeLabel + ':' + String(new Date().getSeconds()).padStart(2,'0');
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ============================================================
+   SCENARIO SWITCH
+   ============================================================ */
+function setScenario(key){
+  currentScenario = key;
+  document.querySelectorAll('.scenario-btn').forEach(b=> b.classList.toggle('active', b.dataset.key===key));
+  const s = SCENARIOS[key];
+  if(s.alert){
+    alertLog.unshift({ time:s.timeLabel+' (vừa xảy ra)', type:s.alert.type, action:s.alert.desc, status:'Đang xử lý', level:s.alert.level });
+    showToast('⚠ ' + s.alert.type + ' — hệ thống đã phản ứng tự động');
+    renderAlertTable();
+  } else {
+    showToast('Hệ thống trở về trạng thái bình thường');
+  }
+  renderAll();
+}
+
+/* ============================================================
+   LIVE SIMULATION LOOP
+   ============================================================ */
+function stepLive(){
+  const target = SCENARIOS[currentScenario].target;
+  METRICS.forEach(m=>{
+    const t = target[m.key];
+    const jitter = (Math.random()-0.5) * (m.key==='rain'? 2 : (m.max-m.min)*0.01);
+    live[m.key] += (t - live[m.key]) * 0.35 + jitter;
+    live[m.key] = Math.max(m.min, Math.min(m.max, live[m.key]));
+    history[m.key].push(live[m.key]);
+    if(history[m.key].length>20) history[m.key].shift();
+  });
+  renderOverview();
+  renderMetrics();
+  renderPond();
+}
+setInterval(stepLive, 2600);
+
+/* ============================================================
+   RENDER: OVERVIEW
+   ============================================================ */
+function renderStatusStrip(){
+  const s = SCENARIOS[currentScenario];
+  const strip = document.getElementById('statusStrip');
+  const items = [
+    { label:'Chế độ vận hành', value:autoMode?'Tự động':'Thủ công', color:COLORS.teal, ic:'bolt' },
+    { label:'Kịch bản hiện tại', value:s.label, color:s.color, ic:'level' },
+    { label:'Cảnh báo đang mở', value: s.alert? '1 cảnh báo' : 'Không có', color: s.alert? COLORS.coral: COLORS.teal, ic:'mail' },
+    { label:'Máy cho ăn', value: s.feeder==='scheduled'?'Theo lịch': s.feeder==='off'?'Đã tắt':'Tạm dừng', color: s.feeder==='scheduled'?COLORS.teal:COLORS.amber, ic:'feeder' },
+  ];
+  strip.innerHTML = items.map(it=>`
+    <div class="status-chip">
+      <div class="icon" style="background:${it.color}22; color:${it.color}">${icon(it.ic,18,it.color)}</div>
+      <div><div class="label">${it.label}</div><div class="value">${it.value}</div></div>
+    </div>`).join('');
+}
+
+function renderOverview(){
+  renderStatusStrip();
+  document.getElementById('pondScenarioLabel').textContent = SCENARIOS[currentScenario].label;
+  document.getElementById('pondScenarioLabel').style.color = SCENARIOS[currentScenario].color;
+  document.getElementById('pondScenarioLabel').style.background = SCENARIOS[currentScenario].color+'22';
+
+  const feed = document.getElementById('activeAlerts');
+  const s = SCENARIOS[currentScenario];
+  if(!s.alert){
+    feed.innerHTML = `<div class="empty-note">Không có cảnh báo nào đang hoạt động. Tất cả thông số trong ngưỡng an toàn.</div>`;
+  } else {
+    const c = s.alert.level==='coral'?COLORS.coral:COLORS.amber;
+    feed.innerHTML = `<div class="alert-item"><div class="abar" style="background:${c}"></div>
+      <div><div class="atitle" style="color:${c}">${s.alert.type}</div>
+      <div class="adesc">${s.alert.desc}</div>
+      <div class="atime">Ghi nhận lúc ${s.timeLabel}</div></div></div>`;
+  }
+}
+
+function renderPond(){
+  const doStat = statusOf('do', live.do);
+  const phStat = statusOf('ph', live.ph);
+  const tempStat = statusOf('temp', live.temp);
+  const c = { teal:COLORS.teal, amber:COLORS.amber, coral:COLORS.coral, blue:COLORS.blue };
+  document.getElementById('probeDO').setAttribute('fill', c[doStat]);
+  document.getElementById('probePH').setAttribute('fill', c[phStat]);
+  document.getElementById('probeTemp').setAttribute('fill', c[tempStat]);
+
+  // water level (y range 110..250 maps to level 100..40)
+  const lvl = live.level;
+  const y = 250 - ((lvl-40)/(100-40))*140;
+  document.getElementById('waterRect').setAttribute('y', y);
+  document.getElementById('waterRect').setAttribute('height', 250-y);
+  document.getElementById('levelLine').setAttribute('y1', y);
+  document.getElementById('levelLine').setAttribute('y2', y);
+  document.getElementById('levelLabel').textContent = 'Mực nước: ' + Math.round(lvl) + '%';
+
+  const s = SCENARIOS[currentScenario];
+  document.getElementById('acidLayer').setAttribute('opacity', currentScenario==='rain' ? 0.8 : 0);
+  document.getElementById('acidLayer').setAttribute('y', y);
+  document.getElementById('rainGroup').setAttribute('opacity', currentScenario==='rain' ? 1 : 0);
+  document.getElementById('sunGroup').setAttribute('opacity', currentScenario==='heat' ? 1 : 0);
+  document.getElementById('moonGroup').setAttribute('opacity', currentScenario==='night' ? 1 : 0);
+  document.getElementById('drainGroup').setAttribute('opacity', s.pumpDrain ? 1 : 0);
+  document.getElementById('intakeGroup').setAttribute('opacity', s.pumpIntake ? 1 : 0);
+  document.getElementById('bubbleGroup').style.display = (s.paddle==='off') ? 'none':'block';
+
+  ['paddle1','paddle2'].forEach(id=>{
+    const el = document.getElementById(id);
+    el.classList.remove('speed-off','speed-low','speed-high');
+    el.classList.add('speed-' + s.paddle);
+  });
+}
+
+/* ============================================================
+   RENDER: REALTIME METRICS
+   ============================================================ */
+function drawSparkline(canvas, data, color){
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = canvas.clientWidth * 2;
+  const h = canvas.height = canvas.clientHeight * 2;
+  ctx.clearRect(0,0,w,h);
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = (max-min) || 1;
+  ctx.beginPath();
+  data.forEach((v,i)=>{
+    const x = (i/(data.length-1)) * w;
+    const y = h - ((v-min)/range) * (h*0.75) - h*0.1;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = color; ctx.lineWidth = 3.5; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.stroke();
+  // fill
+  ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath();
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, color+'33'); grad.addColorStop(1, color+'00');
+  ctx.fillStyle = grad; ctx.fill();
+}
+
+function renderMetrics(){
+  const grid = document.getElementById('metricGrid');
+  if(grid.children.length===0){
+    grid.innerHTML = METRICS.map(m=>`
+      <div class="panel metric-card" id="mc-${m.key}">
+        <div class="mtop">
+          <div>
+            <div class="micon" id="mi-${m.key}">${icon(m.icon,18)}</div>
+          </div>
+          <span class="mstatus" id="ms-${m.key}"></span>
+        </div>
+        <div>
+          <div class="mname">${m.name}</div>
+          <div class="mval" id="mv-${m.key}"></div>
+        </div>
+        <canvas class="spark" id="sp-${m.key}"></canvas>
+        <div class="mrange" id="mr-${m.key}"></div>
+      </div>`).join('');
+  }
+  METRICS.forEach(m=>{
+    const val = live[m.key];
+    const stat = statusOf(m.key, val);
+    const col = COLORS[stat];
+    document.getElementById('mi-'+m.key).style.background = col+'22';
+    document.getElementById('mi-'+m.key).style.color = col;
+    document.getElementById('ms-'+m.key).textContent = statusText[stat];
+    document.getElementById('ms-'+m.key).style.background = col+'22';
+    document.getElementById('ms-'+m.key).style.color = col;
+    document.getElementById('mv-'+m.key).innerHTML = val.toFixed(m.decimals) + `<span class="munit">${m.unit}</span>`;
+    document.getElementById('mr-'+m.key).textContent = `Dải cảm biến: ${m.min}–${m.max} ${m.unit}`;
+    drawSparkline(document.getElementById('sp-'+m.key), history[m.key], col);
+  });
+}
+
+/* ============================================================
+   RENDER: CONTROL
+   ============================================================ */
+const CONTROLS = [
+  { key:'paddle', name:'Sục khí (Paddlewheel)', desc:'Phá tầng nước, tăng oxy hoà tan.', icon:'aerator', options:[['off','Tắt'],['low','Thấp'],['high','Cao']] },
+  { key:'pumpDrain', name:'Bơm xả mặt', desc:'Thoát nước mưa axit trên bề mặt.', icon:'pumpDrain', options:[['off','Tắt'],['on','Bật']] },
+  { key:'pumpIntake', name:'Bơm cấp nước pha loãng', desc:'Lấy nước từ ao lắng khi độ mặn cao.', icon:'pumpIntake', options:[['off','Tắt'],['on','Bật']] },
+  { key:'feeder', name:'Máy cho ăn', desc:'Cấp thức ăn tự động theo lịch.', icon:'feeder', options:[['off','Tắt'],['suspended','Tạm dừng'],['scheduled','Theo lịch']] },
+];
+let manualOverride = {};
+
+function renderControls(){
+  const grid = document.getElementById('controlGrid');
+  document.getElementById('autoBanner').style.display = autoMode ? 'flex':'none';
+  const s = SCENARIOS[currentScenario];
+  const state = {
+    paddle: manualOverride.paddle ?? s.paddle,
+    pumpDrain: manualOverride.pumpDrain ?? (s.pumpDrain?'on':'off'),
+    pumpIntake: manualOverride.pumpIntake ?? (s.pumpIntake?'on':'off'),
+    feeder: manualOverride.feeder ?? s.feeder,
+  };
+  grid.innerHTML = CONTROLS.map(c=>{
+    const cur = state[c.key];
+    return `<div class="panel ctrl-card">
+      <div class="ctrl-top">
+        <div>
+          <div class="ctrl-icon" style="background:${COLORS.blue}22; color:${COLORS.blue}">${icon(c.icon,20,COLORS.blue)}</div>
+        </div>
+        <div class="ctrl-state">trạng thái: <b>${c.options.find(o=>o[0]===cur)?.[1]||cur}</b></div>
+      </div>
+      <div><div class="ctrl-name">${c.name}</div><div class="ctrl-desc">${c.desc}</div></div>
+      <div class="segmented" data-ckey="${c.key}">
+        ${c.options.map(([val,lbl])=>`<button data-val="${val}" ${autoMode?'disabled':''} class="${cur===val?'on':''}">${lbl}</button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.segmented').forEach(seg=>{
+    const ck = seg.dataset.ckey;
+    seg.querySelectorAll('button').forEach(btn=>{
+      btn.onclick = ()=>{
+        if(autoMode) return;
+        manualOverride[ck] = btn.dataset.val;
+        renderControls();
+        showToast('Đã cập nhật: ' + CONTROLS.find(c=>c.key===ck).name);
+      };
+    });
+  });
+}
+
+/* ============================================================
+   RENDER: HISTORY CHARTS (synthetic 24h data telling the 3 workflow story)
+   ============================================================ */
+const HIST_METRICS = [
+  { key:'do', name:'Oxy hoà tan (DO)', unit:'mg/L', color:COLORS.teal,
+    data:[6.4,6.2,5.9,5.5,5.0,4.4,3.8,3.6,4.1,5.0,5.8,6.1,6.0,5.7,5.4,5.0,4.9,5.3,5.8,6.1,6.3,6.4,6.5,6.4],
+    marker:{ i:7, label:'DO<4.0 → tắt cho ăn, sục khí tối đa' } },
+  { key:'ph', name:'Độ pH', unit:'', color:COLORS.blue,
+    data:[7.8,7.8,7.7,7.8,7.9,7.8,7.7,7.8,7.8,7.9,7.8,7.6,6.8,5.9,5.6,6.1,6.9,7.3,7.6,7.7,7.8,7.8,7.8,7.8],
+    marker:{ i:14, label:'Mưa lớn → pH giảm, bơm xả kích hoạt' } },
+  { key:'temp', name:'Nhiệt độ', unit:'°C', color:COLORS.amber,
+    data:[27,26.6,26.3,26.1,26,26.2,27,28.5,30.2,31.8,33.1,34.3,34.8,34.5,33.7,32.2,30.5,29.1,28.2,27.6,27.2,27,26.9,26.8],
+    marker:{ i:12, label:'Nắng nóng đỉnh điểm → bơm cấp pha loãng' } },
+  { key:'ec', name:'Độ mặn (EC)', unit:'ppt', color:COLORS.coral,
+    data:[18,18,18,18,17,17,18,20,23,26,29,31,32,31,29,26,23,20,18,17,17,18,18,18],
+    marker:{ i:12, label:'EC>30ppt cùng lúc nhiệt độ cao' } },
+];
+
+function drawBigChart(canvas, series, thresholdVal, thresholdLabel){
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = canvas.clientWidth * 2;
+  const h = canvas.height = canvas.clientHeight * 2;
+  ctx.clearRect(0,0,w,h);
+  const pad = 10*2;
+  const data = series.data;
+  const min = Math.min(...data, thresholdVal ?? Infinity);
+  const max = Math.max(...data, thresholdVal ?? -Infinity);
+  const range = (max-min) || 1;
+  const X = i => pad + (i/(data.length-1)) * (w-pad*2);
+  const Y = v => (h-pad) - ((v-min)/range) * (h-pad*2);
+
+  // threshold line
+  if(thresholdVal!=null){
+    ctx.beginPath(); ctx.moveTo(pad, Y(thresholdVal)); ctx.lineTo(w-pad, Y(thresholdVal));
+    ctx.strokeStyle = 'rgba(242,86,59,0.55)'; ctx.setLineDash([6,5]); ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
+  }
+  // line
+  ctx.beginPath();
+  data.forEach((v,i)=> i===0?ctx.moveTo(X(i),Y(v)):ctx.lineTo(X(i),Y(v)));
+  ctx.strokeStyle = series.color; ctx.lineWidth=4; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
+  // fill
+  ctx.lineTo(X(data.length-1), h-pad); ctx.lineTo(X(0), h-pad); ctx.closePath();
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, series.color+'2E'); grad.addColorStop(1, series.color+'00');
+  ctx.fillStyle = grad; ctx.fill();
+  // marker point
+  if(series.marker){
+    const mi = series.marker.i;
+    ctx.beginPath(); ctx.arc(X(mi), Y(data[mi]), 7, 0, Math.PI*2);
+    ctx.fillStyle = '#F2563B'; ctx.fill();
+    ctx.beginPath(); ctx.arc(X(mi), Y(data[mi]), 11, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(242,86,59,0.4)'; ctx.lineWidth=3; ctx.stroke();
+  }
+}
+
+function renderCharts(){
+  const grid = document.getElementById('chartGrid');
+  if(grid.children.length===0){
+    grid.innerHTML = HIST_METRICS.map(s=>`
+      <div class="panel chart-card">
+        <div class="chart-head">
+          <span class="cname">${s.name}</span>
+          <span class="cnow" style="color:${s.color}">${s.data[s.data.length-1]}${s.unit}</span>
+        </div>
+        <canvas class="bigchart" id="bc-${s.key}"></canvas>
+        <div class="legend">
+          <span><i style="background:${s.color}"></i>24 giờ qua</span>
+          <span><i style="background:#F2563B"></i>${s.marker.label}</span>
+        </div>
+      </div>`).join('');
+  }
+  const thresholdMap = { do:thresh.doMin.val, ph:thresh.phMin.val, temp:thresh.tempMax.val, ec:thresh.ecMax.val };
+  HIST_METRICS.forEach(s=> drawBigChart(document.getElementById('bc-'+s.key), s, thresholdMap[s.key]));
+}
+window.addEventListener('resize', ()=>{ renderCharts(); renderMetrics(); });
+
+/* ============================================================
+   RENDER: THRESHOLDS
+   ============================================================ */
+function renderThresholds(){
+  const grid = document.getElementById('threshGrid');
+  grid.innerHTML = Object.entries(thresh).map(([key, t])=>`
+    <div class="panel thresh-card">
+      <div class="thresh-top"><span class="tname">${t.label}</span><span class="tval" id="tv-${key}">${t.val}${t.unit}</span></div>
+      <input type="range" min="${t.min}" max="${t.max}" step="${t.step}" value="${t.val}" id="ti-${key}">
+      <div class="thresh-scale"><span>${t.min}${t.unit}</span><span>${t.max}${t.unit}</span></div>
+      <div class="thresh-note">${threshNote(key)}</div>
+    </div>`).join('');
+  Object.keys(thresh).forEach(key=>{
+    document.getElementById('ti-'+key).oninput = (e)=>{
+      thresh[key].val = parseFloat(e.target.value);
+      document.getElementById('tv-'+key).textContent = thresh[key].val + thresh[key].unit;
+    };
+  });
+}
+function threshNote(key){
+  return {
+    doMin:'Dưới ngưỡng này hệ thống tắt cho ăn và bật sục khí tối đa (mô phỏng thiếu oxy ban đêm 02:00–05:00).',
+    doRestore:'DO phải vượt mức này thì hệ thống mới coi là đã phục hồi an toàn.',
+    phMin:'Dưới ngưỡng này được xem là nước mưa axit hoá bề mặt, kích hoạt bơm xả.',
+    tempMax:'Vượt ngưỡng này kết hợp EC cao sẽ kích hoạt bơm cấp nước pha loãng.',
+    ecMax:'Độ mặn vượt mức này gây stress thẩm thấu cho tôm.',
+    rainTrigger:'Tốc độ mưa vượt mức này sẽ tự động bật bơm xả mặt và sục khí phá tầng.',
+  }[key];
+}
+document.getElementById('saveThresh').onclick = ()=>{ showToast('✓ Đã lưu ngưỡng kiểm thử'); renderCharts(); renderMetrics(); };
+document.getElementById('resetThresh').onclick = ()=>{ thresh = JSON.parse(JSON.stringify(THRESH_DEFAULTS)); renderThresholds(); showToast('Đã khôi phục ngưỡng mặc định'); renderCharts(); };
+
+/* ============================================================
+   RENDER: ALERT LOG
+   ============================================================ */
+let alertFilter = 'all';
+const ALERT_TYPES = ['all','Mưa lớn & axit hoá','Thiếu oxy ban đêm','Nhiệt độ & độ mặn cao'];
+function renderAlertFilters(){
+  const wrap = document.getElementById('alertFilters');
+  wrap.innerHTML = ALERT_TYPES.map(t=>`<button class="filter-chip ${alertFilter===t?'active':''}" data-t="${t}">${t==='all'?'Tất cả':t}</button>`).join('');
+  wrap.querySelectorAll('.filter-chip').forEach(b=> b.onclick = ()=>{ alertFilter = b.dataset.t; renderAlertFilters(); renderAlertTable(); });
+}
+function renderAlertTable(){
+  const body = document.getElementById('alertTableBody');
+  const rows = alertLog.filter(a=> alertFilter==='all' || a.type===alertFilter);
+  const col = { coral:COLORS.coral, amber:COLORS.amber };
+  body.innerHTML = rows.map(a=>`
+    <tr>
+      <td class="ttime">${a.time}</td>
+      <td><span class="tag" style="background:${col[a.level]}1F; color:${col[a.level]}"><i style="background:${col[a.level]}"></i>${a.type}</span></td>
+      <td>${a.action}</td>
+      <td>${a.status}</td>
+    </tr>`).join('') || `<tr><td colspan="4" class="empty-note">Không có cảnh báo phù hợp bộ lọc.</td></tr>`;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastTimer;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), 3200);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function renderAll(){
+  renderOverview();
+  renderMetrics();
+  renderControls();
+  renderCharts();
+  renderThresholds();
+  renderPond();
+}
+renderAlertFilters();
+renderAlertTable();
+renderAll();
+</script>
+</body>
+</html>

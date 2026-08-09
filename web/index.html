@@ -1,51 +1,23 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Authentication and Sensor Test</title>
-    <style>
-      :root { font-family: system-ui, sans-serif; color-scheme: light dark; }
-      body { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
-      form { display: grid; gap: .75rem; max-width: 420px; }
-      label { display: grid; gap: .25rem; }
-      input, button { box-sizing: border-box; font: inherit; padding: .6rem; }
-      .actions { display: flex; gap: .5rem; }
-      section { margin-top: 1.5rem; padding: 1rem; border: 1px solid #8886; border-radius: .5rem; }
-      pre { min-height: 2rem; padding: .75rem; overflow: auto; background: #8882; }
-      .status { font-weight: 600; overflow-wrap: anywhere; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Smart Shrimp Pond monitoring and control dashboard"
+    />
+    <meta name="theme-color" content="#071512" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <title>Smart Shrimp Pond</title>
   </head>
   <body>
-    <h1>Firebase test</h1>
-    <p>Sign in, verify the database profile, and listen for live sensor values.</p>
-
-    <form id="login-form">
-      <label>Email <input id="email" type="email" autocomplete="username" required></label>
-      <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
-      <div class="actions">
-        <button id="login-button" type="submit">Sign in and test</button>
-        <button id="logout-button" type="button" hidden>Sign out</button>
-      </div>
-    </form>
-
-    <section>
-      <h2>1. Authentication</h2>
-      <p id="auth-status" class="status">Checking authentication...</p>
-    </section>
-
-    <section>
-      <h2>2. User profile</h2>
-      <p>Expected path: <code>/users/{uid}</code></p>
-      <pre id="profile-output">No profile loaded.</pre>
-    </section>
-
-    <section>
-      <h2>3. Live sensor data</h2>
-      <p id="sensor-status" class="status">Sign in to start the sensor test.</p>
-      <pre id="sensor-output">No sensor data received.</pre>
-    </section>
-
-    <script type="module" src="/js/test.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

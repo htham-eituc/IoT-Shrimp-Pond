@@ -1,6 +1,6 @@
 # Smart Shrimp Pond
 
-IoT shrimp-pond monitoring and control prototype using **Firebase Realtime Database**, **Firebase Authentication**, a custom **HTML/JS web dashboard**, and **Wokwi** for IoT simulation.
+IoT shrimp-pond monitoring and control prototype using **Firebase Realtime Database**, **Firebase Authentication**, a **Vite + React + TypeScript web dashboard**, and **Wokwi** for IoT simulation.
 
 ```text
 Web Dashboard ↔ Firebase Realtime Database ↔ IoT / Wokwi
@@ -85,7 +85,8 @@ npm install firebase
 
 Configure the Firebase Web SDK with your project values:
 
-```js
+```dotenv
+VITE_POND_DATA_SOURCE=firebase
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
 VITE_FIREBASE_DATABASE_URL=
@@ -95,15 +96,35 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
 
+For local UI development, the safe default is the Firebase-shaped mock source:
+
+```dotenv
+VITE_POND_DATA_SOURCE=mock
+```
+
+The React UI consumes a shared `PondDataSource` contract. `MockPondDataSource`
+and `FirebasePondDataSource` expose the same domain objects, subscriptions, and
+farmer-authorized operations. The UI does not write device-owned sensor values,
+actuator feedback, pond status, alerts, or connection state.
+
 The web should:
 
 ```text
 Login
 → read current user profile
-→ receive real-time sensor update
+→ subscribe to assigned pond data
+→ receive real-time sensor, alert, command, and settings updates
+→ create manual commands and wait for controller state feedback
 ```
 
-> If the web is plain HTML/JS using Firebase CDN imports, npm is not required; a local static server is enough.
+Available web checks:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
 
 ## 4. IoT / Wokwi Setup
 

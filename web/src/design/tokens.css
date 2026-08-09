@@ -1,0 +1,36 @@
+:root {
+  color-scheme: dark;
+  font-family: var(--font-body);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  --color-bg: #06202b;
+  --color-bg-deep: #041821;
+  --color-surface: #0d2e3b;
+  --color-surface-alt: #123b4a;
+  --color-raised: #163f4e;
+  --color-border: rgb(255 255 255 / 8%);
+  --color-border-strong: rgb(132 196 203 / 22%);
+  --color-text: #eaf4f2;
+  --color-text-muted: #7fa3a6;
+  --color-text-faint: #4e7378;
+  --color-normal: #2fbfa0;
+  --color-warning: #e8a33d;
+  --color-critical: #f2563b;
+  --color-info: #5fa8d3;
+  --color-offline: #94a3b8;
+  --rgb-normal: 47 191 160;
+  --rgb-warning: 232 163 61;
+  --rgb-critical: 242 86 59;
+  --rgb-info: 95 168 211;
+
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-panel: 0 18px 55px rgb(0 8 12 / 18%);
+}

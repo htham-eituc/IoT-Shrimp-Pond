@@ -12,10 +12,8 @@ Web Dashboard ↔ Firebase Realtime Database ↔ IoT / Wokwi
 
 ### Web
 - Node.js 20+ and npm
-- Firebase project with:
-  - Authentication → Email/Password enabled
-  - Realtime Database created
-  - `database.rules.json` applied
+- Phase 1 web app uses Vite + React + TypeScript with mock authentication only
+- Firebase Web SDK integration is planned for a later phase
 
 ### IoT
 - Wokwi account or Wokwi VS Code extension
@@ -77,40 +75,31 @@ npm install
 npm run dev
 ```
 
-If Firebase is not already installed:
+Phase 1 implements only the dashboard foundation: reusable design tokens, mock
+authentication, the authenticated shell, header context, and responsive
+navigation. The mock login creates this farmer profile:
 
-```bash
-npm install firebase
+```json
+{
+  "role": "farmer",
+  "pondId": "pond-001",
+  "displayName": "Pond Operator"
+}
 ```
 
-Configure the Firebase Web SDK with your project values:
-
-```dotenv
-VITE_POND_DATA_SOURCE=firebase
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_DATABASE_URL=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-```
-
-For local UI development, the safe default is the Firebase-shaped mock source:
-
-```dotenv
-VITE_POND_DATA_SOURCE=mock
-```
-
-The React UI consumes a shared `PondDataSource` contract. `MockPondDataSource`
-and `FirebasePondDataSource` expose the same domain objects, subscriptions, and
-farmer-authorized operations. The UI does not write device-owned sensor values,
-actuator feedback, pond status, alerts, or connection state.
+Use `farmer@example.com` with any non-empty placeholder password. The mock app
+stores only the mock session, never the password.
 
 The web should:
 
 ```text
-Login
+Phase 1:
+Login with mock auth
+→ restore or clear the local mock session predictably
+→ show the assigned pond name, connection indicator, current mode, and navigation
+
+Later phases:
+Firebase login
 → read current user profile
 → subscribe to assigned pond data
 → receive real-time sensor, alert, command, and settings updates

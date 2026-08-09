@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MockPondDataSource } from "./MockPondDataSource";
 import { MOCK_NOW_MS } from "./mockDatabase";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("MockPondDataSource", () => {
   it("signs in as the mock farmer and exposes pond-001", async () => {
@@ -55,6 +59,7 @@ describe("MockPondDataSource", () => {
   });
 
   it("creates manual commands without mutating confirmed device state", async () => {
+    vi.useFakeTimers();
     const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
     await source.signIn("farmer@example.com", "placeholder");
 
@@ -77,6 +82,43 @@ describe("MockPondDataSource", () => {
     });
     expect(snapshot.commands["pond-001"]["cmd-001"]).toEqual(command.value);
     expect(snapshot.ponds["pond-001"].devices).toEqual(beforeDevices);
+    source.dispose();
+  });
+
+  it("mock IoT controller completes pending commands after a device delay", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(undefined, () => nowMs);
+    await source.signIn("farmer@example.com", "placeholder");
+
+    const command = await source.createCommand("pond-001", {
+      device: "aerator",
+      action: "on",
+      createdAtMs: nowMs,
+    });
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.aerator).toBe(false);
+    expect(source.getDatabaseSnapshot().commands["pond-001"][command.id].status).toBe("pending");
+
+    nowMs += 349;
+    await vi.advanceTimersByTimeAsync(349);
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.aerator).toBe(false);
+
+    nowMs += 1;
+    await vi.advanceTimersByTimeAsync(1);
+    const snapshot = source.getDatabaseSnapshot();
+
+    expect(snapshot.ponds["pond-001"].devices.aerator).toBe(true);
+    expect(snapshot.commands["pond-001"][command.id].status).toBe("completed");
+    expect(snapshot.commands["pond-001"][command.id].processedAtMs).toBe(MOCK_NOW_MS + 350);
+    expect(Object.values(snapshot.events["pond-001"])).toContainEqual({
+      type: "device_action",
+      source: "manual",
+      device: "aerator",
+      action: "on",
+      reason: `manual_command:${command.id}`,
+      createdAtMs: MOCK_NOW_MS + 350,
+    });
+    source.dispose();
   });
 
   it("queries telemetry by timestamp and limit", async () => {
@@ -102,5 +144,112 @@ describe("MockPondDataSource", () => {
     expect("updatePondStatus" in source).toBe(false);
     expect("updateDeviceState" in source).toBe(false);
     expect("updateSensors" in source).toBe(false);
+  });
+
+  it("runs the hypoxia scenario with device-owned status, alert, events, and telemetry", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(undefined, () => nowMs);
+    await source.signIn("farmer@example.com", "placeholder");
+
+    source.setDemoScenario("pond-001", "hypoxia");
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].status).toBe("warning");
+
+    nowMs += 1_000;
+    await vi.advanceTimersByTimeAsync(1_000);
+    const criticalSnapshot = source.getDatabaseSnapshot();
+
+    expect(criticalSnapshot.ponds["pond-001"].sensors.do).toBeLessThan(4);
+    expect(criticalSnapshot.ponds["pond-001"].status).toBe("critical");
+    expect(criticalSnapshot.ponds["pond-001"].devices).toMatchObject({
+      aerator: true,
+      feeder: false,
+      buzzer: true,
+      warningBeacon: true,
+    });
+    expect(Object.values(criticalSnapshot.alerts["pond-001"])).toContainEqual(
+      expect.objectContaining({
+        type: "hypoxia",
+        severity: "critical",
+        status: "active",
+        resolvedAtMs: null,
+      }),
+    );
+
+    nowMs += 4_000;
+    await vi.advanceTimersByTimeAsync(4_000);
+    const telemetry = await source.getTelemetry("pond-001", { limit: 1 });
+    expect(telemetry[0].value).toMatchObject({
+      timestampMs: MOCK_NOW_MS + 5_000,
+      rain: false,
+    });
+    expect(telemetry[0].value.do).toBeLessThan(4);
+    source.dispose();
+  });
+
+  it("runs rain overflow with boolean rain and internal-only rain intensity", async () => {
+    vi.useFakeTimers();
+    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
+    await source.signIn("farmer@example.com", "placeholder");
+
+    source.setDemoScenario("pond-001", "rain_overflow");
+    const snapshot = source.getDatabaseSnapshot();
+
+    expect(snapshot.ponds["pond-001"].sensors.rain).toBe(true);
+    expect(snapshot.ponds["pond-001"].sensors).not.toHaveProperty("rainIntensityMmPerHour");
+    expect(snapshot.ponds["pond-001"].sensors.waterLevel).toBeGreaterThan(90);
+    expect(snapshot.ponds["pond-001"].devices.drainagePump).toBe(true);
+    expect(snapshot.ponds["pond-001"].devices.aerator).toBe(true);
+    expect(Object.values(snapshot.alerts["pond-001"])).toContainEqual(
+      expect.objectContaining({ type: "rain_overflow", status: "active" }),
+    );
+    expect(source.getDemoScenarioState().rainIntensityMmPerHour).toBeGreaterThan(0);
+    source.dispose();
+  });
+
+  it("runs heat salinity and uses the boolean feeder state for reduced feeding behavior", async () => {
+    vi.useFakeTimers();
+    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
+    await source.signIn("farmer@example.com", "placeholder");
+
+    source.setDemoScenario("pond-001", "heat_salinity");
+    const snapshot = source.getDatabaseSnapshot();
+
+    expect(snapshot.ponds["pond-001"].sensors.temperature).toBeGreaterThan(
+      snapshot.settings["pond-001"].thresholds.temperature.warningHigh,
+    );
+    expect(snapshot.ponds["pond-001"].sensors.salinity).toBeGreaterThan(
+      snapshot.settings["pond-001"].thresholds.salinity.warningHigh,
+    );
+    expect(snapshot.ponds["pond-001"].devices.dilutionPump).toBe(true);
+    expect(snapshot.ponds["pond-001"].devices.feeder).toBe(false);
+    expect(Object.values(snapshot.alerts["pond-001"])).toContainEqual(
+      expect.objectContaining({ type: "heat_salinity", severity: "warning", status: "active" }),
+    );
+    source.dispose();
+  });
+
+  it("recovers active scenario alerts when normal conditions return", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(undefined, () => nowMs);
+    await source.signIn("farmer@example.com", "placeholder");
+
+    source.setDemoScenario("pond-001", "hypoxia");
+    nowMs += 1_000;
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(Object.values(source.getDatabaseSnapshot().alerts["pond-001"]).some((alert) => alert.status === "active")).toBe(true);
+
+    nowMs += 1_000;
+    source.setDemoScenario("pond-001", "normal");
+    const snapshot = source.getDatabaseSnapshot();
+
+    expect(snapshot.ponds["pond-001"].sensors.do).toBeGreaterThan(5.5);
+    expect(snapshot.ponds["pond-001"].status).toBe("normal");
+    expect(Object.values(snapshot.alerts["pond-001"]).every((alert) => alert.status === "resolved")).toBe(true);
+    expect(Object.values(snapshot.events["pond-001"])).toContainEqual(
+      expect.objectContaining({ type: "workflow_resolved", source: "automatic" }),
+    );
+    source.dispose();
   });
 });

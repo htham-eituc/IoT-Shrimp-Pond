@@ -36,6 +36,7 @@ export interface PondDataSource {
   subscribeSettings(pondId: string, callback: SubscriptionCallback<PondSettings | null>): Unsubscribe;
   subscribeAlerts(pondId: string, callback: SubscriptionCallback<Array<KeyedRecord<PondAlert>>>): Unsubscribe;
   subscribeEvents(pondId: string, callback: SubscriptionCallback<Array<KeyedRecord<PondEvent>>>): Unsubscribe;
+  subscribeCommands(pondId: string, callback: SubscriptionCallback<Array<KeyedRecord<Command>>>): Unsubscribe;
 
   getTelemetry(pondId: string, queryOptions?: TelemetryQueryOptions): Promise<Array<KeyedRecord<TelemetryRecord>>>;
 

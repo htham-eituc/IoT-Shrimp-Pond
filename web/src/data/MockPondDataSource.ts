@@ -12,21 +12,24 @@ import type {
   UserProfile,
 } from "../domain";
 import type { CreateCommandRequest, PondDataSource, SubscriptionCallback, TelemetryQueryOptions, Unsubscribe } from "./PondDataSource";
+import { MockIoTController, type DemoScenario, type DemoScenarioState } from "./MockIoTController";
 import { createMockPondDatabase } from "./mockDatabase";
 
 const FARMER_EMAIL = "farmer@example.com";
 const FARMER_UID = "mock-farmer-uid";
 
-type PondSubscriptionKey = "ponds" | "settings" | "alerts" | "events";
+type PondSubscriptionKey = "ponds" | "settings" | "alerts" | "events" | "commands";
 
 export class MockPondDataSource implements PondDataSource {
   private readonly database: PondDatabaseRoot;
+  private readonly controller: MockIoTController;
   private readonly listeners = new Set<() => void>();
   private currentUser: AuthenticatedUser | null = null;
   private commandSequence = 1;
 
   constructor(database: PondDatabaseRoot = createMockPondDatabase(), private readonly now: () => number = () => Date.now()) {
     this.database = clone(database);
+    this.controller = new MockIoTController(this.database, now, () => this.emit());
   }
 
   async signIn(email: string, password: string): Promise<AuthenticatedUser> {
@@ -70,6 +73,10 @@ export class MockPondDataSource implements PondDataSource {
 
   subscribeEvents(pondId: string, callback: SubscriptionCallback<Array<KeyedRecord<PondEvent>>>): Unsubscribe {
     return this.subscribe("events", pondId, () => callback(this.snapshotRecordList(this.database.events[pondId] ?? {})));
+  }
+
+  subscribeCommands(pondId: string, callback: SubscriptionCallback<Array<KeyedRecord<Command>>>): Unsubscribe {
+    return this.subscribe("commands", pondId, () => callback(this.snapshotRecordList(this.database.commands[pondId] ?? {})));
   }
 
   async getTelemetry(pondId: string, queryOptions: TelemetryQueryOptions = {}): Promise<Array<KeyedRecord<TelemetryRecord>>> {
@@ -141,8 +148,27 @@ export class MockPondDataSource implements PondDataSource {
 
     this.database.commands[pondId][id] = command;
     this.emit();
+    this.controller.schedulePendingCommand(pondId, id);
 
     return { id, value: clone(command) };
+  }
+
+  setDemoScenario(pondId: string, scenario: DemoScenario): void {
+    this.assertFarmerForPond(pondId);
+    this.controller.setScenario(pondId, scenario);
+  }
+
+  stopDemoScenario(): void {
+    this.controller.stopScenario();
+  }
+
+  getDemoScenarioState(): DemoScenarioState {
+    return this.controller.getScenarioState();
+  }
+
+  dispose(): void {
+    this.controller.dispose();
+    this.listeners.clear();
   }
 
   getDatabaseSnapshot(): PondDatabaseRoot {

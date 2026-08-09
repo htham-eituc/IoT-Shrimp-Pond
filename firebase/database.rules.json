@@ -188,6 +188,72 @@
           ".write": "auth != null && root.child('users').child(auth.uid).child('pondId').val() === $pondId"
         }
       }
+    },
+
+    "simulation": {
+      "$pondId": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
+
+        "control": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
+
+          ".validate": "newData.hasChildren(['enabled', 'scenario', 'requestId', 'requestedAtMs'])",
+
+          "enabled": {
+            ".validate": "newData.isBoolean()"
+          },
+
+          "scenario": {
+            ".validate": "newData.val() === 'normal' || newData.val() === 'rain' || newData.val() === 'hypoxia' || newData.val() === 'heat_salinity'"
+          },
+
+          "requestId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+
+          "requestedAtMs": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+
+          "$other": {
+            ".validate": false
+          }
+        },
+
+        "state": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'device' && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
+
+          ".validate": "newData.hasChildren(['active', 'scenario', 'requestId', 'startedAtMs', 'updatedAtMs'])",
+
+          "active": {
+            ".validate": "newData.isBoolean()"
+          },
+
+          "scenario": {
+            ".validate": "newData.val() === 'normal' || newData.val() === 'rain' || newData.val() === 'hypoxia' || newData.val() === 'heat_salinity'"
+          },
+
+          "requestId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+
+          "startedAtMs": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+
+          "updatedAtMs": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+
+          "$other": {
+            ".validate": false
+          }
+        },
+
+        "$other": {
+          ".validate": false
+        }
+      }
     }
-  }
+  } 
 }

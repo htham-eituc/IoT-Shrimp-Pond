@@ -745,6 +745,47 @@ workflow_resolved
 
 ---
 
+# 8. `/simulation/{pondId}`
+
+Controls sensor simulation scenarios and stores the simulation state reported by the device.
+
+## Example
+
+```json
+{
+  "control": {
+    "enabled": true,
+    "scenario": "rain",
+    "requestId": "sim-001",
+    "requestedAtMs": 1786200200000
+  },
+
+  "state": {
+    "active": true,
+    "scenario": "rain",
+    "requestId": "sim-001",
+    "startedAtMs": 1786200201000,
+    "updatedAtMs": 1786200205000
+  }
+}
+```
+
+### Supported scenarios
+
+`normal`, `rain`, `hypoxia`, `heat_salinity`.
+
+### Write ownership
+
+| Data      | Writer |
+| --------- | ------ |
+| `control` | Farmer |
+| `state`   | Device |
+
+The farmer requests a scenario through `control`. The device reads the request, simulates the corresponding sensor behavior, writes the resulting values to `/ponds/{pondId}/sensors`, and reports the active simulation through `state`.
+
+---
+
+
 # 14. Realtime Database Security Rules
 
 Recommended prototype `database.rules.json`:
@@ -964,6 +1005,7 @@ WRITE  settings
 WRITE  new manual commands
 WRITE  pond name
 WRITE  events
+WRITE  simulation control
 ```
 
 Not allowed:
@@ -993,6 +1035,7 @@ WRITE  telemetry
 WRITE  alerts
 WRITE  events
 WRITE  command completion status
+WRITE  simulation state
 ```
 
 Not allowed:
@@ -1157,14 +1200,3 @@ firebase/database.rules.json
 ```
 
 ---
-
-# Red Team Review
-
-- The project proposal defines Firebase storage, environmental thresholds, sensors, actuators, alerts, manual/automatic operation, and the three emergency workflows. This design retains those requirements while removing Node-RED and MQTT.
-- Firebase Authentication, the `farmer`/`device` role model, `/users`, `/commands`, and the exact database paths are architectural additions required by the simplified implementation.
-- The login endpoint is Firebase's Authentication REST endpoint, not a custom `/api/login`; introducing a custom endpoint would require restoring a backend.
-- The rules assume each authenticated account belongs to exactly one pond through `/users/{uid}/pondId`.
-- `/users/{uid}` is intentionally client read-only. Roles and pond assignments therefore need to be provisioned through the Firebase Console or another trusted administrative mechanism.
-- The command rules intentionally allow the farmer to create a command and the device to update its `status` and `processedAtMs`. These rules should be tested in the Firebase Rules Playground before implementation.
-- Telemetry currently validates required fields at the record level but does not duplicate all numeric bounds from `/ponds/{pondId}/sensors`; add equivalent child validation if strict historical-data validation is required.
-- A long-lived device using Email/Password must refresh expired Firebase ID tokens. The login response contains a refresh token for this purpose.

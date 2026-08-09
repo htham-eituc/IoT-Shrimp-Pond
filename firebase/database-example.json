@@ -149,5 +149,24 @@
         "createdAtMs": 1786200101000
       }
     }
+  },
+
+  "simulation": {
+    "pond-001": {
+      "control": {
+        "enabled": false,
+        "scenario": "normal",
+        "requestId": "initial",
+        "requestedAtMs": 0
+      },
+
+      "state": {
+        "active": false,
+        "scenario": "normal",
+        "requestId": "initial",
+        "startedAtMs": 0,
+        "updatedAtMs": 0
+      }
+    }
   }
 }

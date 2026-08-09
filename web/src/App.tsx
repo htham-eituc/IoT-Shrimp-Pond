@@ -3,16 +3,19 @@ import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./components/AppShell";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { LoginScreen } from "./components/LoginScreen";
+import { getPondDataSource } from "./data";
+
+const dataSource = getPondDataSource();
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Application />
+    <AuthProvider dataSource={dataSource}>
+      <Application dataSource={dataSource} />
     </AuthProvider>
   );
 }
 
-function Application() {
+function Application({ dataSource }: { dataSource: ReturnType<typeof getPondDataSource> }) {
   const auth = useAuth();
 
   if (auth.status === "checking") {
@@ -30,5 +33,5 @@ function Application() {
     );
   }
 
-  return <AppShell session={auth.session} onLogout={auth.signOut} />;
+  return <AppShell dataSource={dataSource} session={auth.session} onLogout={auth.signOut} />;
 }

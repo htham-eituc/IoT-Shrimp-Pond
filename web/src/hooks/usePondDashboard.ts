@@ -32,9 +32,6 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-
     try {
       const unsubscribes = [
         dataSource.subscribePond(pondId, setPond),
@@ -64,8 +61,10 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
         }
       };
     } catch (reason) {
-      setLoading(false);
-      setError(reason instanceof Error ? reason.message : "Could not subscribe to pond data.");
+      queueMicrotask(() => {
+        setLoading(false);
+        setError(reason instanceof Error ? reason.message : "Could not subscribe to pond data.");
+      });
       return undefined;
     }
   }, [dataSource, pondId]);

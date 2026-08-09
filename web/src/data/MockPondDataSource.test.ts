@@ -121,6 +121,30 @@ describe("MockPondDataSource", () => {
     source.dispose();
   });
 
+  it("does not let automatic scenario actions overwrite confirmed devices in manual mode", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(undefined, () => nowMs);
+    await source.signIn("farmer@example.com", "placeholder");
+    await source.updateSettings("pond-001", { mode: "manual" });
+
+    await source.createCommand("pond-001", {
+      device: "aerator",
+      action: "on",
+      createdAtMs: nowMs,
+    });
+    nowMs += 350;
+    await vi.advanceTimersByTimeAsync(350);
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.aerator).toBe(true);
+
+    source.setDemoScenario("pond-001", "normal");
+    nowMs += 1_000;
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.aerator).toBe(true);
+    source.dispose();
+  });
+
   it("queries telemetry by timestamp and limit", async () => {
     const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
     await source.signIn("farmer@example.com", "placeholder");
@@ -204,6 +228,32 @@ describe("MockPondDataSource", () => {
       expect.objectContaining({ type: "rain_overflow", status: "active" }),
     );
     expect(source.getDemoScenarioState().rainIntensityMmPerHour).toBeGreaterThan(0);
+    source.dispose();
+  });
+
+  it("publishes scenario changes through PondDataSource pond subscriptions", async () => {
+    vi.useFakeTimers();
+    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
+    await source.signIn("farmer@example.com", "placeholder");
+
+    const observed = new Array<{ rain: boolean; drainagePump: boolean; status: string }>();
+    const unsubscribe = source.subscribePond("pond-001", (pond) => {
+      if (!pond) return;
+      observed.push({
+        rain: pond.sensors.rain,
+        drainagePump: pond.devices.drainagePump,
+        status: pond.status,
+      });
+    });
+
+    source.setDemoScenario("pond-001", "rain_overflow");
+
+    expect(observed).toContainEqual({
+      rain: true,
+      drainagePump: true,
+      status: "critical",
+    });
+    unsubscribe();
     source.dispose();
   });
 

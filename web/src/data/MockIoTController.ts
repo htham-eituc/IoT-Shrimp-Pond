@@ -91,6 +91,7 @@ export class MockIoTController {
     if (!pond) return;
 
     const previousDevices = { ...pond.devices };
+    const automaticMode = this.database.settings[pondId]?.mode !== "manual";
 
     if (this.activeScenario === "normal") {
       this.applyNormal(pondId, pond);
@@ -106,6 +107,10 @@ export class MockIoTController {
 
     if (this.activeScenario === "heat_salinity") {
       this.applyHeatSalinity(pondId, pond);
+    }
+
+    if (!automaticMode) {
+      pond.devices = previousDevices;
     }
 
     pond.connected = true;

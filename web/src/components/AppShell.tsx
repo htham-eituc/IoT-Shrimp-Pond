@@ -57,6 +57,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const dashboard = usePondDashboard(dataSource, session.profile.pondId);
   const activeItem = NAV_ITEMS.find((item) => item.key === activeView) ?? NAV_ITEMS[0];
+  const demoScenariosEnabled = isDemoScenarioSource(dataSource);
 
   function onNavKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const currentIndex = NAV_ITEMS.findIndex((item) => item.key === activeView);
@@ -155,6 +156,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
             activeView={activeView}
             activeLabel={activeItem.label}
             selectedScenario={selectedScenario}
+            demoScenariosEnabled={demoScenariosEnabled}
             onScenarioChange={selectScenario}
             dashboard={dashboard}
           />
@@ -170,6 +172,7 @@ function DashboardContent({
   activeView,
   activeLabel,
   selectedScenario,
+  demoScenariosEnabled,
   onScenarioChange,
   dashboard,
 }: {
@@ -178,6 +181,7 @@ function DashboardContent({
   activeView: NavKey;
   activeLabel: string;
   selectedScenario: DemoScenario;
+  demoScenariosEnabled: boolean;
   onScenarioChange(scenario: DemoScenario): void;
   dashboard: ReturnType<typeof usePondDashboard>;
 }) {
@@ -200,6 +204,7 @@ function DashboardContent({
         settingsMode={dashboard.settings?.mode ?? "automatic"}
         alerts={dashboard.alerts}
         selectedScenario={selectedScenario}
+        demoScenariosEnabled={demoScenariosEnabled}
         onScenarioChange={onScenarioChange}
       />
     );
@@ -259,12 +264,14 @@ function OverviewView({
   settingsMode,
   alerts,
   selectedScenario,
+  demoScenariosEnabled,
   onScenarioChange,
 }: {
   pond: PondState;
   settingsMode: string;
   alerts: Array<KeyedRecord<PondAlert>>;
   selectedScenario: DemoScenario;
+  demoScenariosEnabled: boolean;
   onScenarioChange(scenario: DemoScenario): void;
 }) {
   const activeAlerts = alerts.filter((alert) => alert.value.status === "active");
@@ -279,7 +286,9 @@ function OverviewView({
         trailing={<StatusBadge label={titleCase(pond.status)} tone={pond.status} />}
       />
 
-      <DemoScenarioControls selectedScenario={selectedScenario} onScenarioChange={onScenarioChange} />
+      {demoScenariosEnabled && (
+        <DemoScenarioControls selectedScenario={selectedScenario} onScenarioChange={onScenarioChange} />
+      )}
 
       <section className="summary-grid summary-grid--overview" aria-label="Overview summary">
         <SummaryCard label="Connection" value={pond.connected ? "Connected" : "Disconnected"} tone={pond.connected ? "normal" : "offline"} helper={`Last seen ${formatTimestamp(pond.lastSeenMs)}`} />

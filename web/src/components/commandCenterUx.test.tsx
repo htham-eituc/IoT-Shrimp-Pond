@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { KeyedRecord, PondAlert } from "../domain";
 import { createMockPondDatabase, MockPondDataSource } from "../data";
 import { setLocale } from "../i18n";
+import { TEST_FARMER_ACCESS } from "../test/fixtures";
 import { ActiveAlertsPanel } from "./ActiveAlertsPanel";
 import { CompactDeviceControls } from "./CompactDeviceControls";
 
@@ -28,7 +29,7 @@ describe("command-center UX refinement", () => {
   ] as const)("keeps manual command buttons visible and disabled in automatic mode (%s)", async (locale, helper) => {
     await setLocale(locale, null);
     const database = createMockPondDatabase();
-    const source = new MockPondDataSource(database);
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, database);
     const pond = database.ponds["pond-001"];
     const markup = renderToStaticMarkup(
       <CompactDeviceControls

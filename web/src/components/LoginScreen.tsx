@@ -1,5 +1,5 @@
 import { FormEvent, useId, useState } from "react";
-import { AlertTriangle, LoaderCircle, LogIn, Waves } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, LoaderCircle, LogIn, Waves } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
@@ -7,20 +7,26 @@ interface LoginScreenProps {
   emailHint: string;
   error: string | null;
   loading: boolean;
-  onLogin(email: string, password: string): Promise<void>;
+  onLogin(email: string, password: string, rememberMe: boolean): Promise<void>;
 }
 
 export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenProps) {
   const { t } = useTranslation(["auth", "common"]);
   const [email, setEmail] = useState(emailHint);
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const emailId = useId();
   const passwordId = useId();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onLogin(email, password);
-    setPassword("");
+    if (loading) return;
+    try {
+      await onLogin(email, password, rememberMe);
+    } finally {
+      setPassword("");
+    }
   }
 
   return (
@@ -48,21 +54,49 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
           <input
             id={emailId}
             type="email"
+            name="email"
             autoComplete="username"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            disabled={loading}
             required
           />
 
           <label htmlFor={passwordId}>{t("password")}</label>
-          <input
-            id={passwordId}
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+          <div className="login-password-field">
+            <input
+              id={passwordId}
+              type={passwordVisible ? "text" : "password"}
+              name="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              disabled={loading}
+              required
+            />
+            <button
+              className="login-password-toggle"
+              type="button"
+              aria-label={t(passwordVisible ? "hidePassword" : "showPassword")}
+              aria-controls={passwordId}
+              aria-pressed={passwordVisible}
+              onClick={() => setPasswordVisible((visible) => !visible)}
+              disabled={loading}
+            >
+              {passwordVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+            </button>
+          </div>
+
+          <label className="login-remember">
+            <input
+              type="checkbox"
+              name="rememberMe"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              disabled={loading}
+            />
+            <span>{t("rememberMe")}</span>
+          </label>
 
           {error && (
             <p className="form-error" role="alert">

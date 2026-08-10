@@ -24,7 +24,10 @@ Web Dashboard ↔ Firebase Realtime Database ↔ IoT / Wokwi
 
 ## 2. Firebase Setup
 
-Create Firebase Authentication accounts for the dashboard user and IoT device, then create matching metadata records under:
+Enable the **Email/Password** sign-in provider in Firebase Authentication. Create
+the farmer account through Firebase Console or another trusted provisioning
+process, copy its Firebase Authentication UID, and create the matching metadata
+record under:
 
 ```text
 /users/{uid}
@@ -35,16 +38,23 @@ Example:
 ```json
 {
   "role": "farmer",
-  "pondId": "pond-001"
+  "pondId": "pond-001",
+  "displayName": "Pond Operator"
 }
 ```
 
-or:
+The UID is the key in `/users/{uid}`; the browser must not choose its own UID or
+pond assignment. A successfully authenticated account is denied dashboard access
+when this profile is missing, malformed, assigned a non-farmer role, or lacks a
+valid `pondId`.
+
+The IoT controller uses a separate device account and metadata record, for example:
 
 ```json
 {
   "role": "device",
-  "pondId": "pond-001"
+  "pondId": "pond-001",
+  "displayName": "Pond Controller"
 }
 ```
 
@@ -75,14 +85,16 @@ npm install
 npm run dev
 ```
 
-Copy `web/.env.example` to `web/.env` when local configuration is needed. The
-default data mode is mock:
+Copy `web/.env.example` to `web/.env` and provide the Firebase web configuration.
+Firebase Email/Password authentication and `/users/{uid}` profile authorization
+are used in every data mode. The default pond data mode is mock:
 
 ```text
 VITE_DATA_MODE=mock
 ```
 
-The mock login creates this farmer profile:
+Create the Firebase Authentication account through a trusted provisioning process,
+then add its authorization profile at `/users/{uid}`:
 
 ```json
 {
@@ -92,21 +104,19 @@ The mock login creates this farmer profile:
 }
 ```
 
-Use `farmer@example.com` with any non-empty placeholder password. The mock app
-stores only a local authenticated marker, never the password.
-
-For Firebase mode, set `VITE_DATA_MODE=firebase` and provide every
-`VITE_FIREBASE_*` value listed in `web/.env.example`. Enable Email/Password in
-Firebase Authentication and provision `/users/{uid}` with a farmer role and
-pond assignment before signing in.
+The mock mode applies only to pond data and IoT scenarios; it does not provide a
+mock login or hardcoded account. Set `VITE_DATA_MODE=firebase` to use Realtime
+Database for operational pond data as well. Never put a farmer email or password
+in a Vite environment file.
 
 The web data flow is:
 
 ```text
-Login through the selected PondDataSource
-→ read current user profile
+Login through Firebase Authentication
+→ read /users/{uid}
 → require role = farmer
-→ subscribe to assigned pond data
+→ select mock or Firebase pond data
+→ subscribe to profile.pondId
 → receive real-time sensor, alert, command, and settings updates
 → create manual commands and wait for controller state feedback
 ```

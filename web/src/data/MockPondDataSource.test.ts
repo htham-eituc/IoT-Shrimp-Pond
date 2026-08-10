@@ -1,64 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MockPondDataSource } from "./MockPondDataSource";
 import { MOCK_NOW_MS } from "./mockDatabase";
+import { TEST_FARMER_ACCESS } from "../test/fixtures";
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 describe("MockPondDataSource", () => {
-  it("restores an in-memory authenticated session through the shared interface", async () => {
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    expect(await source.restoreSession()).toBeNull();
-
-    const signedIn = await source.signIn("farmer@example.com", "placeholder");
-    expect(await source.restoreSession()).toEqual(signedIn);
-    source.dispose();
-  });
-
-  it("restores mock authentication predictably across fresh browser data-source instances", async () => {
-    const values = new Map<string, string>();
-    const localStorage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => values.set(key, value),
-      removeItem: (key: string) => values.delete(key),
-    } as unknown as Storage;
-    vi.stubGlobal("window", { localStorage });
-
-    const firstSource = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await firstSource.signIn("farmer@example.com", "placeholder");
-
-    const restoredSource = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    expect((await restoredSource.restoreSession())?.profile).toEqual({
-      role: "farmer",
-      pondId: "pond-001",
-      displayName: "Pond Operator",
-    });
-
-    await restoredSource.signOut();
-    const signedOutSource = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    expect(await signedOutSource.restoreSession()).toBeNull();
-    firstSource.dispose();
-    restoredSource.dispose();
-    signedOutSource.dispose();
-  });
-
-  it("signs in as the mock farmer and exposes pond-001", async () => {
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    const user = await source.signIn("farmer@example.com", "placeholder");
-
-    expect(user.profile).toEqual({
-      role: "farmer",
-      pondId: "pond-001",
-      displayName: "Pond Operator",
-    });
-    expect(source.getCurrentUser()).toEqual(user);
-  });
-
   it("subscribes with immutable Firebase-shaped snapshots", async () => {
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
 
     const snapshots: Array<string | undefined> = [];
     const unsubscribe = source.subscribePond("pond-001", (pond) => {
@@ -73,8 +24,7 @@ describe("MockPondDataSource", () => {
   });
 
   it("allows settings changes without touching device-owned pond state", async () => {
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
     const before = source.getDatabaseSnapshot().ponds["pond-001"];
 
     const settings = await source.updateSettings("pond-001", {
@@ -97,8 +47,7 @@ describe("MockPondDataSource", () => {
 
   it("creates manual commands without mutating confirmed device state", async () => {
     vi.useFakeTimers();
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
 
     const beforeDevices = source.getDatabaseSnapshot().ponds["pond-001"].devices;
     const command = await source.createCommand("pond-001", {
@@ -125,8 +74,7 @@ describe("MockPondDataSource", () => {
   it("mock IoT controller completes pending commands after a device delay", async () => {
     vi.useFakeTimers();
     let nowMs = MOCK_NOW_MS;
-    const source = new MockPondDataSource(undefined, () => nowMs);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
 
     const command = await source.createCommand("pond-001", {
       device: "aerator",
@@ -161,8 +109,7 @@ describe("MockPondDataSource", () => {
   it("does not let automatic scenario actions overwrite confirmed devices in manual mode", async () => {
     vi.useFakeTimers();
     let nowMs = MOCK_NOW_MS;
-    const source = new MockPondDataSource(undefined, () => nowMs);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
     await source.updateSettings("pond-001", { mode: "manual" });
 
     await source.createCommand("pond-001", {
@@ -183,8 +130,7 @@ describe("MockPondDataSource", () => {
   });
 
   it("queries telemetry by timestamp and limit", async () => {
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
 
     const records = await source.getTelemetry("pond-001", { limit: 3, endAtMs: MOCK_NOW_MS });
 
@@ -200,7 +146,7 @@ describe("MockPondDataSource", () => {
   });
 
   it("does not expose environmental alert creation through the web data source", () => {
-    const source = new MockPondDataSource();
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS);
     expect("createAlert" in source).toBe(false);
     expect("updatePondStatus" in source).toBe(false);
     expect("updateDeviceState" in source).toBe(false);
@@ -210,8 +156,7 @@ describe("MockPondDataSource", () => {
   it("runs the hypoxia scenario with device-owned status, alert, events, and telemetry", async () => {
     vi.useFakeTimers();
     let nowMs = MOCK_NOW_MS;
-    const source = new MockPondDataSource(undefined, () => nowMs);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
 
     source.setDemoScenario("pond-001", "hypoxia");
     expect(source.getDatabaseSnapshot().ponds["pond-001"].status).toBe("warning");
@@ -250,8 +195,7 @@ describe("MockPondDataSource", () => {
 
   it("runs rain overflow with boolean rain and internal-only rain intensity", async () => {
     vi.useFakeTimers();
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
 
     source.setDemoScenario("pond-001", "rain_overflow");
     const snapshot = source.getDatabaseSnapshot();
@@ -270,8 +214,7 @@ describe("MockPondDataSource", () => {
 
   it("publishes scenario changes through PondDataSource pond subscriptions", async () => {
     vi.useFakeTimers();
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
 
     const observed = new Array<{ rain: boolean; drainagePump: boolean; status: string }>();
     const unsubscribe = source.subscribePond("pond-001", (pond) => {
@@ -296,8 +239,7 @@ describe("MockPondDataSource", () => {
 
   it("runs heat salinity and uses the boolean feeder state for reduced feeding behavior", async () => {
     vi.useFakeTimers();
-    const source = new MockPondDataSource(undefined, () => MOCK_NOW_MS);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
 
     source.setDemoScenario("pond-001", "heat_salinity");
     const snapshot = source.getDatabaseSnapshot();
@@ -319,8 +261,7 @@ describe("MockPondDataSource", () => {
   it("recovers active scenario alerts when normal conditions return", async () => {
     vi.useFakeTimers();
     let nowMs = MOCK_NOW_MS;
-    const source = new MockPondDataSource(undefined, () => nowMs);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
 
     source.setDemoScenario("pond-001", "hypoxia");
     nowMs += 1_000;

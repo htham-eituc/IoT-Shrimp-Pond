@@ -1,16 +1,6 @@
-import { getApp, getApps, initializeApp, type FirebaseOptions } from "firebase/app";
-import {
-  browserLocalPersistence,
-  getAuth,
-  setPersistence,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  type Auth,
-} from "firebase/auth";
 import {
   endAt,
   get,
-  getDatabase,
   limitToLast,
   onValue,
   orderByChild,
@@ -23,8 +13,8 @@ import {
   type Database,
   type QueryConstraint,
 } from "firebase/database";
+import { getFirebaseClient, type FirebaseWebConfig } from "../firebase/client";
 import type {
-  AuthenticatedUser,
   Command,
   DeepPartial,
   KeyedRecord,
@@ -39,6 +29,7 @@ import type {
   PondDataSource,
   SubscriptionCallback,
   SubscriptionErrorCallback,
+  PondAccessContext,
   TelemetryQueryOptions,
   Unsubscribe,
 } from "./PondDataSource";
@@ -50,70 +41,13 @@ import {
   parsePondSettings,
   parsePondState,
   parseTelemetryRecord,
-  parseUserProfile,
 } from "./firebaseMappers";
 
-const FIREBASE_APP_NAME = "smart-shrimp-pond-dashboard";
-
-export interface FirebasePondConfig extends FirebaseOptions {
-  apiKey: string;
-  authDomain: string;
-  databaseURL: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-}
-
 export class FirebasePondDataSource implements PondDataSource {
-  private readonly auth: Auth;
   private readonly database: Database;
-  private currentUser: AuthenticatedUser | null = null;
 
-  constructor(config: FirebasePondConfig) {
-    const app = getApps().some((candidate) => candidate.name === FIREBASE_APP_NAME)
-      ? getApp(FIREBASE_APP_NAME)
-      : initializeApp(config, FIREBASE_APP_NAME);
-    this.auth = getAuth(app);
-    this.database = getDatabase(app);
-  }
-
-  async restoreSession(): Promise<AuthenticatedUser | null> {
-    await this.auth.authStateReady();
-    const firebaseUser = this.auth.currentUser;
-    if (!firebaseUser) {
-      this.currentUser = null;
-      return null;
-    }
-
-    try {
-      return await this.loadFarmer(firebaseUser.uid, firebaseUser.email ?? "");
-    } catch (error) {
-      await firebaseSignOut(this.auth);
-      this.currentUser = null;
-      throw error;
-    }
-  }
-
-  async signIn(email: string, password: string): Promise<AuthenticatedUser> {
-    await setPersistence(this.auth, browserLocalPersistence);
-    const credential = await signInWithEmailAndPassword(this.auth, email.trim(), password);
-    try {
-      return await this.loadFarmer(credential.user.uid, credential.user.email ?? email.trim());
-    } catch (error) {
-      await firebaseSignOut(this.auth);
-      this.currentUser = null;
-      throw error;
-    }
-  }
-
-  async signOut(): Promise<void> {
-    await firebaseSignOut(this.auth);
-    this.currentUser = null;
-  }
-
-  getCurrentUser(): AuthenticatedUser | null {
-    return this.currentUser ? structuredClone(this.currentUser) : null;
+  constructor(config: FirebaseWebConfig, private readonly access: PondAccessContext) {
+    this.database = getFirebaseClient(config).database;
   }
 
   subscribePond(
@@ -259,18 +193,8 @@ export class FirebasePondDataSource implements PondDataSource {
     return { id: commandRef.key, value: command };
   }
 
-  private async loadFarmer(uid: string, email: string): Promise<AuthenticatedUser> {
-    const snapshot = await get(ref(this.database, `users/${uid}`));
-    if (!snapshot.exists()) throw new Error("No dashboard profile exists for this Firebase account.");
-    const profile = parseUserProfile(snapshot.val(), `users/${uid}`);
-    if (profile.role !== "farmer") throw new Error("This Firebase account is not authorized as a farmer.");
-    this.currentUser = { uid, email, profile };
-    return structuredClone(this.currentUser);
-  }
-
   private assertFarmerForPond(pondId: string): void {
-    if (!this.currentUser) throw new Error("Sign in before reading pond data.");
-    if (this.currentUser.profile.role !== "farmer" || this.currentUser.profile.pondId !== pondId) {
+    if (this.access.profile.role !== "farmer" || this.access.profile.pondId !== pondId) {
       throw new Error(`Current user cannot access pond ${pondId}.`);
     }
   }

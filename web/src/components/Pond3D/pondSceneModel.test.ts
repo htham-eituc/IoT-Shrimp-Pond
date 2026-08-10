@@ -5,6 +5,7 @@ import { createMockPondDatabase, MockPondDataSource, MOCK_NOW_MS } from "../../d
 import { Pond3DVisualization } from "./Pond3DVisualization";
 import { detectWebGLSupport } from "./pondAccessibility";
 import { createPondSceneModel } from "./pondSceneModel";
+import { TEST_FARMER_ACCESS } from "../../test/fixtures";
 
 afterEach(() => vi.useRealTimers());
 
@@ -68,8 +69,7 @@ describe("3D pond scene projection", () => {
   it("projects all subscribed mock scenario outcomes without scenario input", async () => {
     vi.useFakeTimers();
     let nowMs = MOCK_NOW_MS;
-    const source = new MockPondDataSource(undefined, () => nowMs);
-    await source.signIn("farmer@example.com", "placeholder");
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
     const observed = new Array<{ pond: ReturnType<typeof source.getDatabaseSnapshot>["ponds"][string]; model: ReturnType<typeof createPondSceneModel> }>();
     const unsubscribe = source.subscribePond("pond-001", (pond) => {
       if (pond) observed.push({ pond, model: createPondSceneModel(pond) });

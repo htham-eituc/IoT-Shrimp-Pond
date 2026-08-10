@@ -1,5 +1,4 @@
 import type {
-  AuthenticatedUser,
   Command,
   DeepPartial,
   KeyedRecord,
@@ -9,15 +8,10 @@ import type {
   PondSettings,
   PondState,
   TelemetryRecord,
-  UserProfile,
 } from "../domain";
-import type { CreateCommandRequest, PondDataSource, SubscriptionCallback, TelemetryQueryOptions, Unsubscribe } from "./PondDataSource";
+import type { CreateCommandRequest, PondAccessContext, PondDataSource, SubscriptionCallback, TelemetryQueryOptions, Unsubscribe } from "./PondDataSource";
 import { MockIoTController, type DemoScenario, type DemoScenarioState } from "./MockIoTController";
 import { createMockPondDatabase } from "./mockDatabase";
-
-const FARMER_EMAIL = "farmer@example.com";
-const FARMER_UID = "mock-farmer-uid";
-const MOCK_AUTH_STORAGE_KEY = "smart-shrimp-pond.mock-authenticated.v1";
 
 type PondSubscriptionKey = "ponds" | "settings" | "alerts" | "events" | "commands";
 
@@ -25,55 +19,15 @@ export class MockPondDataSource implements PondDataSource {
   private readonly database: PondDatabaseRoot;
   private readonly controller: MockIoTController;
   private readonly listeners = new Set<() => void>();
-  private currentUser: AuthenticatedUser | null = null;
   private commandSequence = 1;
 
-  constructor(database: PondDatabaseRoot | undefined = undefined, private readonly now: () => number = () => Date.now()) {
+  constructor(
+    private readonly access: PondAccessContext,
+    database: PondDatabaseRoot | undefined = undefined,
+    private readonly now: () => number = () => Date.now(),
+  ) {
     this.database = clone(database ?? createMockPondDatabase(now()));
     this.controller = new MockIoTController(this.database, now, () => this.emit());
-  }
-
-  async restoreSession(): Promise<AuthenticatedUser | null> {
-    if (this.currentUser) return clone(this.currentUser);
-    if (getBrowserStorage()?.getItem(MOCK_AUTH_STORAGE_KEY) !== "true") return null;
-
-    const profile = this.database.users[FARMER_UID];
-    if (!profile || profile.role !== "farmer") return null;
-    this.currentUser = {
-      uid: FARMER_UID,
-      email: FARMER_EMAIL,
-      profile: clone(profile),
-    };
-    return clone(this.currentUser);
-  }
-
-  async signIn(email: string, password: string): Promise<AuthenticatedUser> {
-    if (email.trim().toLowerCase() !== FARMER_EMAIL || password.trim().length === 0) {
-      throw new Error("Invalid mock credentials.");
-    }
-
-    const profile = this.database.users[FARMER_UID];
-    if (!profile || profile.role !== "farmer") {
-      throw new Error("Mock farmer profile is unavailable.");
-    }
-
-    this.currentUser = {
-      uid: FARMER_UID,
-      email: FARMER_EMAIL,
-      profile: clone(profile),
-    };
-    getBrowserStorage()?.setItem(MOCK_AUTH_STORAGE_KEY, "true");
-
-    return clone(this.currentUser);
-  }
-
-  async signOut(): Promise<void> {
-    this.currentUser = null;
-    getBrowserStorage()?.removeItem(MOCK_AUTH_STORAGE_KEY);
-  }
-
-  getCurrentUser(): AuthenticatedUser | null {
-    return this.currentUser ? clone(this.currentUser) : null;
   }
 
   subscribePond(pondId: string, callback: SubscriptionCallback<PondState | null>): Unsubscribe {
@@ -228,17 +182,11 @@ export class MockPondDataSource implements PondDataSource {
     return Object.entries(record).map(([id, value]) => ({ id, value: clone(value) }));
   }
 
-  private assertFarmerForPond(pondId: string): UserProfile {
-    if (!this.currentUser) {
-      throw new Error("Sign in before reading pond data.");
-    }
-
-    const { profile } = this.currentUser;
+  private assertFarmerForPond(pondId: string): void {
+    const { profile } = this.access;
     if (profile.role !== "farmer" || profile.pondId !== pondId) {
       throw new Error(`Current user cannot access pond ${pondId}.`);
     }
-
-    return profile;
   }
 }
 
@@ -258,12 +206,4 @@ function mergePondSettings(current: PondSettings, changes: DeepPartial<PondSetti
 
 function clone<T>(value: T): T {
   return structuredClone(value);
-}
-
-function getBrowserStorage(): Storage | null {
-  try {
-    return typeof window === "undefined" ? null : window.localStorage;
-  } catch {
-    return null;
-  }
 }

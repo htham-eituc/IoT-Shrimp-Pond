@@ -1,37 +1,79 @@
-import { AuthProvider } from "./auth/AuthProvider";
+import { useEffect, useMemo } from "react";
+import { AuthProvider, getAuthSource, resolveAuthenticatedApplicationView } from "./auth";
 import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./components/AppShell";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { LoginScreen } from "./components/LoginScreen";
-import { getPondDataSource } from "./data";
+import { createPondDataSource } from "./data";
+import type { DashboardSession } from "./domain/session";
 
-const dataSource = getPondDataSource();
+const authSource = getAuthSource();
 
 export default function App() {
   return (
-    <AuthProvider dataSource={dataSource}>
-      <Application dataSource={dataSource} />
+    <AuthProvider authSource={authSource}>
+      <Application />
     </AuthProvider>
   );
 }
 
-function Application({ dataSource }: { dataSource: ReturnType<typeof getPondDataSource> }) {
+function Application() {
   const auth = useAuth();
+  const view = resolveAuthenticatedApplicationView(auth.status, auth.session !== null);
 
-  if (auth.status === "checking") {
-    return <LoadingScreen />;
+  if (view === "loading") {
+    return <LoadingScreen state={auth.operation} />;
   }
 
-  if (!auth.session) {
+  if (view === "login" || !auth.session) {
     return (
       <LoginScreen
         emailHint={auth.emailHint}
         error={auth.error}
-        loading={auth.status === "signing-in"}
+        loading={auth.operation === "submitting"}
         onLogin={auth.signIn}
       />
     );
   }
 
-  return <AppShell dataSource={dataSource} session={auth.session} onLogout={auth.signOut} />;
+  return (
+    <AuthenticatedApplication
+      key={auth.session.user.uid}
+      session={auth.session}
+      onLogout={auth.signOut}
+    />
+  );
+}
+
+function AuthenticatedApplication({
+  session,
+  onLogout,
+}: {
+  session: DashboardSession;
+  onLogout(): Promise<void>;
+}) {
+  const dataSource = useMemo(
+    () => createPondDataSource(import.meta.env, {
+      profile: {
+        role: session.user.role,
+        pondId: session.user.pondId,
+        displayName: session.user.displayName,
+      },
+    }),
+    [session.user],
+  );
+
+  useEffect(() => () => {
+    if ("dispose" in dataSource && typeof dataSource.dispose === "function") {
+      dataSource.dispose();
+    }
+  }, [dataSource]);
+
+  return (
+    <AppShell
+      dataSource={dataSource}
+      session={session}
+      onLogout={() => void onLogout()}
+    />
+  );
 }

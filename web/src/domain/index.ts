@@ -30,3 +30,9 @@ export type {
   UserRole,
   WaterLevelThresholdSettings,
 } from "./pond";
+export type {
+  AuthenticatedFarmer,
+  DashboardSession,
+  FarmerProfile,
+  PondShellState,
+} from "./session";

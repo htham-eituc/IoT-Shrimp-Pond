@@ -29,7 +29,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
   const formatters = useLocaleFormatters();
   const [detailView, setDetailView] = useState<DetailView | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<DemoScenario>("normal");
-  const dashboard = usePondDashboard(dataSource, session.profile.pondId);
+  const dashboard = usePondDashboard(dataSource, session.user.pondId);
   const currentTimeMs = useCurrentTimeMs();
   const demoScenariosEnabled = isDemoScenarioSource(dataSource);
   const closeDetail = useCallback(() => setDetailView(null), []);
@@ -37,7 +37,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
 
   function selectScenario(scenario: DemoScenario) {
     setSelectedScenario(scenario);
-    if (isDemoScenarioSource(dataSource)) dataSource.setDemoScenario(session.profile.pondId, scenario);
+    if (isDemoScenarioSource(dataSource)) dataSource.setDemoScenario(session.user.pondId, scenario);
   }
 
   const pondName = dashboard.pond?.name ?? session.pond.name;
@@ -78,8 +78,8 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
           <div className="operator-chip">
             <UserRound aria-hidden="true" />
             <span>
-              <strong>{session.profile.displayName}</strong>
-              <small>{session.profile.pondId}</small>
+              <strong>{session.user.displayName}</strong>
+              <small>{session.user.pondId}</small>
             </span>
           </div>
           <button className="icon-button" type="button" onClick={onLogout} aria-label={t("logout", { ns: "dashboard" })}>
@@ -91,7 +91,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
       <main className="command-center-main" id="main-content">
         <DashboardContent
           dataSource={dataSource}
-          pondId={session.profile.pondId}
+          pondId={session.user.pondId}
           selectedScenario={selectedScenario}
           demoScenariosEnabled={demoScenariosEnabled}
           onScenarioChange={selectScenario}
@@ -110,7 +110,7 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
           <DetailContent
             view={detailView}
             dataSource={dataSource}
-            pondId={session.profile.pondId}
+            pondId={session.user.pondId}
             dashboard={dashboard}
           />
         </DetailDrawer>

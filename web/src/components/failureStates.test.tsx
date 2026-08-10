@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Command, KeyedRecord } from "../domain";
 import { createMockPondDatabase, MockPondDataSource } from "../data";
 import i18n, { setLocale } from "../i18n";
+import { TEST_FARMER_ACCESS } from "../test/fixtures";
 import { ActiveAlertsPanel } from "./ActiveAlertsPanel";
 import { CommandCenterView } from "./CommandCenterView";
 import { CompactDeviceControls } from "./CompactDeviceControls";
@@ -18,7 +19,7 @@ describe("localized operational failure and empty states", () => {
   ] as const)("renders empty, disconnected, and no-command states in %s", async (locale, expected) => {
     await setLocale(locale, null);
     const database = createMockPondDatabase();
-    const source = new MockPondDataSource(database);
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, database);
     const pond = database.ponds["pond-001"];
     const settings = { ...database.settings["pond-001"], mode: "manual" as const };
     const markup = [
@@ -38,7 +39,7 @@ describe("localized operational failure and empty states", () => {
   ] as const)("announces failed commands in %s", async (locale, failedLabel) => {
     await setLocale(locale, null);
     const database = createMockPondDatabase();
-    const source = new MockPondDataSource(database);
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, database);
     const failedCommand: KeyedRecord<Command> = {
       id: "cmd-failed",
       value: { device: "aerator", action: "on", source: "manual", createdAtMs: 1, status: "failed", processedAtMs: 2 },
@@ -67,7 +68,7 @@ describe("localized operational failure and empty states", () => {
   ] as const)("renders stale telemetry and localized data-source errors in %s", async (locale, staleText) => {
     await setLocale(locale, null);
     const database = createMockPondDatabase();
-    const source = new MockPondDataSource(database);
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, database);
     const markup = renderToStaticMarkup(
       <CommandCenterView
         dataSource={source}

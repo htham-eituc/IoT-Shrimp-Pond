@@ -1,5 +1,4 @@
 import type {
-  AuthenticatedUser,
   Command,
   CommandAction,
   CommandDevice,
@@ -11,6 +10,7 @@ import type {
   PondState,
   TelemetryRecord,
 } from "../domain";
+import type { FarmerProfile } from "../domain/session";
 
 export type Unsubscribe = () => void;
 export type SubscriptionCallback<T> = (value: T) => void;
@@ -28,12 +28,11 @@ export interface CreateCommandRequest {
   createdAtMs?: number;
 }
 
-export interface PondDataSource {
-  restoreSession(): Promise<AuthenticatedUser | null>;
-  signIn(email: string, password: string): Promise<AuthenticatedUser>;
-  signOut(): Promise<void>;
-  getCurrentUser(): AuthenticatedUser | null;
+export interface PondAccessContext {
+  profile: FarmerProfile;
+}
 
+export interface PondDataSource {
   subscribePond(pondId: string, callback: SubscriptionCallback<PondState | null>, onError?: SubscriptionErrorCallback): Unsubscribe;
   subscribeSettings(pondId: string, callback: SubscriptionCallback<PondSettings | null>, onError?: SubscriptionErrorCallback): Unsubscribe;
   subscribeAlerts(pondId: string, callback: SubscriptionCallback<Array<KeyedRecord<PondAlert>>>, onError?: SubscriptionErrorCallback): Unsubscribe;

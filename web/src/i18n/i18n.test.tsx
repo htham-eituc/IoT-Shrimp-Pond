@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMockSession } from "../auth/mockAuth";
+import { AuthenticationError } from "../auth";
 import { AppShell } from "../components/AppShell";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { LoginScreen } from "../components/LoginScreen";
@@ -10,6 +10,7 @@ import { PondVisualization } from "../components/PondVisualization";
 import { SettingsView } from "../components/SettingsView";
 import { TelemetryHistoryView } from "../components/TelemetryHistoryView";
 import { MockPondDataSource, createMockPondDatabase } from "../data";
+import { createTestDashboardSession, TEST_FARMER_ACCESS } from "../test/fixtures";
 import i18n, { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, resources, setLocale, translateError, type LocaleStorage, type SupportedLocale } from ".";
 
 afterEach(async () => {
@@ -23,9 +24,9 @@ describe("application localization", () => {
     const login = renderToStaticMarkup(
       <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => undefined} />,
     );
-    const source = new MockPondDataSource();
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS);
     const shell = renderToStaticMarkup(
-      <AppShell dataSource={source} session={createMockSession()} onLogout={() => undefined} />,
+      <AppShell dataSource={source} session={createTestDashboardSession()} onLogout={() => undefined} />,
     );
 
     expect(login).toContain("Đăng nhập");
@@ -43,9 +44,9 @@ describe("application localization", () => {
     const login = renderToStaticMarkup(
       <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => undefined} />,
     );
-    const source = new MockPondDataSource();
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS);
     const shell = renderToStaticMarkup(
-      <AppShell dataSource={source} session={createMockSession()} onLogout={() => undefined} />,
+      <AppShell dataSource={source} session={createTestDashboardSession()} onLogout={() => undefined} />,
     );
 
     expect(login).toContain("Sign in");
@@ -106,7 +107,7 @@ describe("application localization", () => {
     const database = createMockPondDatabase();
     const pond = database.ponds["pond-001"];
     const settings = database.settings["pond-001"];
-    const source = new MockPondDataSource(database);
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, database);
     const records = Object.entries(database.telemetry["pond-001"]).map(([id, value]) => ({ id, value }));
     const alerts = Object.entries(database.alerts["pond-001"]).map(([id, value]) => ({ id, value }));
     const events = Object.entries(database.events["pond-001"]).map(([id, value]) => ({ id, value }));
@@ -124,13 +125,33 @@ describe("application localization", () => {
   });
 
   it("localizes known operational errors without changing their source objects", async () => {
-    const reason = new Error("Invalid mock credentials.");
+    const reason = new AuthenticationError("invalid-credentials");
 
     await setLocale("vi", null);
-    expect(translateError(reason, "signIn")).toBe("Thông tin đăng nhập mô phỏng không hợp lệ.");
+    expect(translateError(reason, "signIn")).toBe("Email hoặc mật khẩu không chính xác.");
     await setLocale("en", null);
-    expect(translateError(reason, "signIn")).toBe("Invalid mock credentials.");
-    expect(reason.message).toBe("Invalid mock credentials.");
+    expect(translateError(reason, "signIn")).toBe("Incorrect email or password.");
+    expect(reason.code).toBe("invalid-credentials");
+  });
+
+  it.each([
+    ["vi", "invalid-credentials", "Email hoặc mật khẩu không chính xác."],
+    ["vi", "network", "Không thể kết nối đến dịch vụ xác thực."],
+    ["vi", "configuration", "Firebase Authentication chưa được cấu hình cho ứng dụng này."],
+    ["vi", "profile-missing", "Tài khoản này chưa có hồ sơ bảng điều khiển."],
+    ["vi", "role-denied", "Tài khoản này không được phép truy cập bảng điều khiển người nuôi."],
+    ["vi", "pond-invalid", "Tài khoản này chưa được phân công ao hợp lệ."],
+    ["vi", "profile-permission-denied", "Ứng dụng không được phép xác minh hồ sơ tài khoản này."],
+    ["en", "invalid-credentials", "Incorrect email or password."],
+    ["en", "network", "Unable to connect to the authentication service."],
+    ["en", "configuration", "Firebase Authentication is not configured for this application."],
+    ["en", "profile-missing", "This account does not have a dashboard profile."],
+    ["en", "role-denied", "This account is not authorized to access the farmer dashboard."],
+    ["en", "pond-invalid", "This account does not have a valid pond assignment."],
+    ["en", "profile-permission-denied", "The application is not permitted to verify this account profile."],
+  ] as const)("maps the %s authentication %s error", async (locale, code, expected) => {
+    await setLocale(locale, null);
+    expect(translateError(new AuthenticationError(code), "signIn")).toBe(expected);
   });
 
   it("keeps Vietnamese and English namespace keys in parity without exposing key placeholders", () => {

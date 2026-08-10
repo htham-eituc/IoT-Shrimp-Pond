@@ -2128,7 +2128,8 @@ button:disabled {
   font-weight: 600;
 }
 
-.login-form input {
+.login-form > input,
+.login-password-field > input {
   width: 100%;
   min-height: 44px;
   margin-bottom: 4px;
@@ -2140,9 +2141,61 @@ button:disabled {
   outline: none;
 }
 
-.login-form input:focus {
+.login-form > input:focus,
+.login-password-field > input:focus {
   border-color: var(--color-normal);
   box-shadow: 0 0 0 3px rgb(var(--rgb-normal) / 12%);
+}
+
+.login-password-field {
+  position: relative;
+}
+
+.login-password-field > input {
+  padding-right: 48px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 2px);
+  place-items: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.login-password-toggle:hover:not(:disabled) {
+  color: var(--color-text);
+  background: rgb(255 255 255 / 5%);
+}
+
+.login-password-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.login-remember {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 9px;
+  color: var(--color-text) !important;
+  font-size: 13px !important;
+  cursor: pointer;
+}
+
+.login-remember input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-normal);
 }
 
 .form-error {

@@ -2,6 +2,7 @@ import i18n, { type TFunction } from "i18next";
 import { initReactI18next } from "react-i18next";
 import { en } from "./locales/en";
 import { vi } from "./locales/vi";
+import { AuthenticationError } from "../auth/authErrors";
 
 export type SupportedLocale = "vi" | "en";
 
@@ -55,6 +56,9 @@ export async function setLocale(locale: SupportedLocale, storage: LocaleStorage 
 }
 
 export function translateError(reason: unknown, fallbackKey: string, t: TFunction = i18n.t): string {
+  if (reason instanceof AuthenticationError) {
+    return t(AUTHENTICATION_ERROR_KEYS[reason.code], { ns: "errors" });
+  }
   const message = reason instanceof Error ? reason.message : null;
   const mappedKey = message ? ERROR_MESSAGE_KEYS[message] : undefined;
   if (mappedKey) return t(mappedKey, { ns: "errors" });
@@ -62,8 +66,6 @@ export function translateError(reason: unknown, fallbackKey: string, t: TFunctio
 }
 
 const ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
-  "Invalid mock credentials.": "invalidMockCredentials",
-  "Mock farmer profile is unavailable.": "mockProfileUnavailable",
   "No dashboard profile exists for this Firebase account.": "firebaseProfileMissing",
   "This Firebase account is not authorized as a farmer.": "firebaseFarmerUnauthorized",
   "Only farmer accounts can open the dashboard.": "farmerOnly",
@@ -72,6 +74,18 @@ const ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   "Manual commands are available only in manual mode.": "manualModeOnly",
   "A command is already pending for this device.": "commandPending",
 };
+
+const AUTHENTICATION_ERROR_KEYS = {
+  "invalid-credentials": "authInvalidCredentials",
+  network: "authNetwork",
+  configuration: "authConfiguration",
+  "profile-missing": "authProfileMissing",
+  "role-denied": "authRoleDenied",
+  "pond-invalid": "authPondInvalid",
+  "profile-permission-denied": "authProfilePermissionDenied",
+  "profile-invalid": "authProfileInvalid",
+  unknown: "authUnknown",
+} as const;
 
 function getBrowserStorage(): LocaleStorage | null {
   return typeof window === "undefined" ? null : window.localStorage;

@@ -2,7 +2,6 @@ export type ConnectionState = "online" | "stale" | "offline";
 
 export interface ConnectionPresentation {
   state: ConnectionState;
-  label: "Online" | "Stale" | "Offline";
   tone: "normal" | "warning" | "offline";
 }
 
@@ -14,9 +13,9 @@ export function getConnectionPresentation(
   currentTimeMs: number | null,
   staleAfterMs = DEFAULT_STALE_AFTER_MS,
 ): ConnectionPresentation {
-  if (!connected) return { state: "offline", label: "Offline", tone: "offline" };
+  if (!connected) return { state: "offline", tone: "offline" };
   if (currentTimeMs !== null && currentTimeMs - lastSeenMs > staleAfterMs) {
-    return { state: "stale", label: "Stale", tone: "warning" };
+    return { state: "stale", tone: "warning" };
   }
-  return { state: "online", label: "Online", tone: "normal" };
+  return { state: "online", tone: "normal" };
 }

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { CloudRain, History } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { KeyedRecord, TelemetryRecord } from "../domain";
 import {
   HISTORY_METRICS,
@@ -7,6 +8,7 @@ import {
   chronologicalTelemetry,
   type HistoryMetricDefinition,
 } from "../history/telemetryHistory";
+import { useLocaleFormatters } from "../i18n/formatters";
 
 interface TelemetryHistoryViewProps {
   records: Array<KeyedRecord<TelemetryRecord>>;
@@ -14,13 +16,15 @@ interface TelemetryHistoryViewProps {
 }
 
 export function TelemetryHistoryView({ records, loading }: TelemetryHistoryViewProps) {
+  const { t } = useTranslation(["common", "history"]);
+  const formatters = useLocaleFormatters();
   const chronologicalRecords = useMemo(() => chronologicalTelemetry(records), [records]);
 
   if (loading) {
     return (
       <div className="state-panel state-panel--info" role="status">
-        <strong>Loading telemetry history</strong>
-        <p>Reading the most recent records for this pond.</p>
+        <strong>{t("loading", { ns: "history" })}</strong>
+        <p>{t("loadingDescription", { ns: "history" })}</p>
       </div>
     );
   }
@@ -29,8 +33,8 @@ export function TelemetryHistoryView({ records, loading }: TelemetryHistoryViewP
     return (
       <div className="history-empty" role="status">
         <History aria-hidden="true" />
-        <strong>No telemetry history</strong>
-        <p>The device has not published any historical records for this pond.</p>
+        <strong>{t("empty", { ns: "history" })}</strong>
+        <p>{t("emptyDescription", { ns: "history" })}</p>
       </div>
     );
   }
@@ -43,18 +47,18 @@ export function TelemetryHistoryView({ records, loading }: TelemetryHistoryViewP
     <div className="view-stack">
       <div className="page-heading page-heading--with-trailing">
         <div>
-          <span className="eyebrow">Telemetry history</span>
-          <h1>Recent water-quality records</h1>
-          <p>Device-published telemetry shown in chronological order. No prediction or diagnosis is applied.</p>
+          <span className="eyebrow">{t("eyebrow", { ns: "history" })}</span>
+          <h1>{t("title", { ns: "history" })}</h1>
+          <p>{t("description", { ns: "history" })}</p>
         </div>
-        <span className="history-count">{chronologicalRecords.length} records</span>
+        <span className="history-count">{t("records", { ns: "history", count: chronologicalRecords.length })}</span>
       </div>
 
-      <section className="history-range" aria-label="History time range">
-        <span><strong>From</strong> {formatTimestamp(firstTimestamp)}</span>
-        <span><strong>To</strong> {formatTimestamp(lastTimestamp)}</span>
+      <section className="history-range" aria-label={t("rangeAriaLabel", { ns: "history" })}>
+        <span><strong>{t("from", { ns: "common" })}</strong> {formatters.timestamp(firstTimestamp)}</span>
+        <span><strong>{t("to", { ns: "common" })}</strong> {formatters.timestamp(lastTimestamp)}</span>
         <span className={rainyRecords.length > 0 ? "history-rain history-rain--active" : "history-rain"}>
-          <CloudRain aria-hidden="true" /> {rainyRecords.length} rain {rainyRecords.length === 1 ? "sample" : "samples"}
+          <CloudRain aria-hidden="true" /> {t("rainSamples", { ns: "history", count: rainyRecords.length })}
         </span>
       </section>
 
@@ -64,7 +68,7 @@ export function TelemetryHistoryView({ records, loading }: TelemetryHistoryViewP
         ))}
       </div>
 
-      <p className="history-legend"><span aria-hidden="true" /> Blue shaded regions mark records where <code>rain</code> was <code>true</code>.</p>
+      <p className="history-legend"><span aria-hidden="true" /> {t("rainLegend", { ns: "history" })}</p>
     </div>
   );
 }
@@ -76,21 +80,32 @@ function TelemetryChart({
   metric: HistoryMetricDefinition;
   records: Array<KeyedRecord<TelemetryRecord>>;
 }) {
+  const { t } = useTranslation(["history", "sensors"]);
+  const formatters = useLocaleFormatters();
   const geometry = buildTelemetryChartGeometry(records, metric.key);
   const points = geometry.points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
   const first = records[0].value.timestampMs;
   const last = records.at(-1)!.value.timestampMs;
   const current = records.at(-1)!.value[metric.key];
-  const summary = `${metric.label}: ${records.length} records, minimum ${formatValue(geometry.min, metric)}, maximum ${formatValue(geometry.max, metric)}, latest ${formatValue(current, metric)}.`;
+  const label = t(`${metric.key}.label`, { ns: "sensors" });
+  const formatValue = (value: number) => `${formatters.number(value, { minimumFractionDigits: metric.decimals, maximumFractionDigits: metric.decimals })}${metric.unit ? ` ${metric.unit}` : ""}`;
+  const summary = t("chartSummary", {
+    ns: "history",
+    metric: label,
+    count: records.length,
+    min: formatValue(geometry.min),
+    max: formatValue(geometry.max),
+    latest: formatValue(current),
+  });
 
   return (
     <article className="history-chart-card">
       <header>
         <div>
-          <span className="eyebrow">{metric.key}</span>
-          <h2>{metric.label}</h2>
+          <span className="eyebrow">{t("sensorEyebrow", { ns: "history" })}</span>
+          <h2>{label}</h2>
         </div>
-        <strong>{formatValue(current, metric)}</strong>
+        <strong>{formatValue(current)}</strong>
       </header>
       <div className="history-chart" role="img" aria-label={summary}>
         <svg viewBox="0 0 600 170" preserveAspectRatio="none" aria-hidden="true">
@@ -114,28 +129,10 @@ function TelemetryChart({
         </svg>
       </div>
       <footer>
-        <time dateTime={new Date(first).toISOString()}>{formatShortTime(first)}</time>
-        <span>{formatValue(geometry.min, metric)} – {formatValue(geometry.max, metric)}</span>
-        <time dateTime={new Date(last).toISOString()}>{formatShortTime(last)}</time>
+        <time dateTime={new Date(first).toISOString()}>{formatters.date(first, { hour: "2-digit", minute: "2-digit" })}</time>
+        <span>{formatValue(geometry.min)} – {formatValue(geometry.max)}</span>
+        <time dateTime={new Date(last).toISOString()}>{formatters.date(last, { hour: "2-digit", minute: "2-digit" })}</time>
       </footer>
     </article>
   );
-}
-
-function formatValue(value: number, metric: HistoryMetricDefinition): string {
-  return `${value.toFixed(metric.decimals)}${metric.unit ? ` ${metric.unit}` : ""}`;
-}
-
-function formatTimestamp(timestampMs: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(timestampMs);
-}
-
-function formatShortTime(timestampMs: number): string {
-  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(timestampMs);
 }

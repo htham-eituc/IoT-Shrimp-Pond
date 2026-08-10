@@ -1,5 +1,7 @@
 import { FormEvent, useId, useState } from "react";
 import { AlertTriangle, LoaderCircle, LogIn, Waves } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface LoginScreenProps {
   emailHint: string;
@@ -9,6 +11,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenProps) {
+  const { t } = useTranslation(["auth", "common"]);
   const [email, setEmail] = useState(emailHint);
   const [password, setPassword] = useState("");
   const emailId = useId();
@@ -28,19 +31,20 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
             <Waves />
           </span>
           <div>
-            <strong>Smart Shrimp Pond</strong>
-            <span>Farmer access</span>
+            <strong>{t("brand", { ns: "common" })}</strong>
+            <span>{t("farmerAccess")}</span>
           </div>
+          <LanguageSwitcher />
         </div>
 
         <div className="auth-copy">
-          <span className="eyebrow">Secure dashboard access</span>
-          <h1 id="login-title">Sign in</h1>
-          <p>Sign in with the farmer account configured for this dashboard environment. Passwords are handled by the active authentication provider and are never stored by the UI.</p>
+          <span className="eyebrow">{t("secureAccess")}</span>
+          <h1 id="login-title">{t("signIn")}</h1>
+          <p>{t("description")}</p>
         </div>
 
         <form className="login-form" onSubmit={(event) => void submit(event)} noValidate>
-          <label htmlFor={emailId}>Email</label>
+          <label htmlFor={emailId}>{t("email")}</label>
           <input
             id={emailId}
             type="email"
@@ -50,7 +54,7 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
             required
           />
 
-          <label htmlFor={passwordId}>Password</label>
+          <label htmlFor={passwordId}>{t("password")}</label>
           <input
             id={passwordId}
             type="password"
@@ -69,7 +73,7 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
 
           <button className="button button--primary" type="submit" disabled={loading}>
             {loading ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogIn aria-hidden="true" />}
-            {loading ? "Signing in" : "Sign in"}
+            {loading ? t("signingIn") : t("signIn")}
           </button>
         </form>
       </section>

@@ -1,4 +1,7 @@
 import type { KeyedRecord, PondAlert, PondSensors, PondSettings, TelemetryRecord } from "../domain";
+import type { TFunction } from "i18next";
+import { formatNumber } from "../i18n/formatters";
+import { getActiveLocale } from "../i18n";
 
 export type MetricTone = "normal" | "warning" | "critical" | "info" | "offline";
 export type SensorMetricKey = keyof PondSensors;
@@ -8,7 +11,7 @@ export interface MetricViewModel {
   label: string;
   value: string;
   unit: string;
-  state: "Normal" | "Warning" | "Critical" | "Info";
+  state: string;
   tone: MetricTone;
   safeRange: string;
   trend: number[];
@@ -19,38 +22,44 @@ export function createMetricViewModels(
   settings: PondSettings | null,
   alerts: Array<KeyedRecord<PondAlert>>,
   telemetry: Array<KeyedRecord<TelemetryRecord>>,
+  t: TFunction,
+  language: string,
 ): MetricViewModel[] {
+  const locale = getActiveLocale(language);
   return [
-    createMetric("ph", "pH", sensors, settings, alerts, telemetry, 2, ""),
-    createMetric("do", "Dissolved oxygen", sensors, settings, alerts, telemetry, 1, "mg/L"),
-    createMetric("temperature", "Temperature", sensors, settings, alerts, telemetry, 1, "°C"),
-    createMetric("waterLevel", "Water level", sensors, settings, alerts, telemetry, 0, "%"),
-    createMetric("rain", "Rain state", sensors, settings, alerts, telemetry, 0, ""),
-    createMetric("ec", "Electrical conductivity", sensors, settings, alerts, telemetry, 1, ""),
-    createMetric("salinity", "Estimated salinity", sensors, settings, alerts, telemetry, 1, "ppt"),
+    createMetric("ph", sensors, settings, alerts, telemetry, 2, "", t, locale),
+    createMetric("do", sensors, settings, alerts, telemetry, 1, "mg/L", t, locale),
+    createMetric("temperature", sensors, settings, alerts, telemetry, 1, "°C", t, locale),
+    createMetric("waterLevel", sensors, settings, alerts, telemetry, 0, "%", t, locale),
+    createMetric("rain", sensors, settings, alerts, telemetry, 0, "", t, locale),
+    createMetric("ec", sensors, settings, alerts, telemetry, 1, "", t, locale),
+    createMetric("salinity", sensors, settings, alerts, telemetry, 1, "ppt", t, locale),
   ];
 }
 
 function createMetric(
   key: SensorMetricKey,
-  label: string,
   sensors: PondSensors,
   settings: PondSettings | null,
   alerts: Array<KeyedRecord<PondAlert>>,
   telemetry: Array<KeyedRecord<TelemetryRecord>>,
   decimals: number,
   unit: string,
+  t: TFunction,
+  locale: ReturnType<typeof getActiveLocale>,
 ): MetricViewModel {
   const rawValue = sensors[key];
   const tone = getMetricTone(key, sensors, settings, alerts);
   return {
     key,
-    label,
-    value: key === "rain" ? (rawValue ? "Có mưa" : "Không mưa") : (rawValue as number).toFixed(decimals),
+    label: t(`${key}.label`, { ns: "sensors" }),
+    value: key === "rain"
+      ? t(rawValue ? "rain.yes" : "rain.no", { ns: "sensors" })
+      : formatNumber(rawValue as number, locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
     unit,
-    state: tone === "critical" ? "Critical" : tone === "warning" ? "Warning" : tone === "info" ? "Info" : "Normal",
+    state: t(`status.${tone}`, { ns: "common" }),
     tone,
-    safeRange: getSafeRange(key, settings),
+    safeRange: getSafeRange(key, settings, t, locale),
     trend: telemetry.map((record) => toTrendValue(record.value[key])),
   };
 }
@@ -114,16 +123,23 @@ function getMetricTone(
   return "info";
 }
 
-function getSafeRange(key: SensorMetricKey, settings: PondSettings | null): string {
-  if (!settings) return "Safe range unavailable";
+function getSafeRange(
+  key: SensorMetricKey,
+  settings: PondSettings | null,
+  t: TFunction,
+  locale: ReturnType<typeof getActiveLocale>,
+): string {
+  if (!settings) return t("safeRangeUnavailable", { ns: "sensors" });
 
-  if (key === "ph") return `${settings.thresholds.ph.normalMin}-${settings.thresholds.ph.normalMax}`;
-  if (key === "do") return `Normal ≥ ${settings.thresholds.do.normalMin} mg/L; recovery > ${settings.thresholds.do.recovery} mg/L`;
-  if (key === "temperature") return `${settings.thresholds.temperature.normalMin}-${settings.thresholds.temperature.normalMax} °C`;
-  if (key === "waterLevel") return `${settings.thresholds.waterLevel.normalMin}-${settings.thresholds.waterLevel.normalMax}%`;
-  if (key === "salinity") return `${settings.thresholds.salinity.normalMin}-${settings.thresholds.salinity.normalMax} ppt`;
-  if (key === "rain") return "Boolean sensor: true/false";
-  return "No configured EC threshold";
+  const number = (value: number) => formatNumber(value, locale, { maximumFractionDigits: 2 });
+
+  if (key === "ph") return t("normalRange", { ns: "sensors", min: number(settings.thresholds.ph.normalMin), max: number(settings.thresholds.ph.normalMax), unit: "" });
+  if (key === "do") return t("dissolvedOxygenRange", { ns: "sensors", normalMin: number(settings.thresholds.do.normalMin), recovery: number(settings.thresholds.do.recovery) });
+  if (key === "temperature") return t("normalRange", { ns: "sensors", min: number(settings.thresholds.temperature.normalMin), max: number(settings.thresholds.temperature.normalMax), unit: " °C" });
+  if (key === "waterLevel") return t("normalRange", { ns: "sensors", min: number(settings.thresholds.waterLevel.normalMin), max: number(settings.thresholds.waterLevel.normalMax), unit: "%" });
+  if (key === "salinity") return t("normalRange", { ns: "sensors", min: number(settings.thresholds.salinity.normalMin), max: number(settings.thresholds.salinity.normalMax), unit: " ppt" });
+  if (key === "rain") return t("booleanRange", { ns: "sensors" });
+  return t("noEcThreshold", { ns: "sensors" });
 }
 
 function toTrendValue(value: number | boolean): number {

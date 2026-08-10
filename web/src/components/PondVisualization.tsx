@@ -1,15 +1,19 @@
 import type { PondState } from "../domain";
+import { useTranslation } from "react-i18next";
+import { useLocaleFormatters } from "../i18n/formatters";
 
 export function PondVisualization({ pond }: { pond: PondState }) {
+  const { t } = useTranslation(["common", "dashboard", "devices"]);
+  const formatters = useLocaleFormatters();
   const waterY = 250 - (clamp(pond.sensors.waterLevel, 0, 100) / 100) * 140;
   const waterHeight = 250 - waterY;
   const statusTone = pond.status;
 
   return (
-    <div className={`pond-scene pond-scene--${statusTone}`} aria-label={createPondDescription(pond)}>
+    <div className={`pond-scene pond-scene--${statusTone}`} aria-label={createPondDescription(pond, t, formatters.percentage)}>
       <svg className="pond-scene__svg" viewBox="0 0 620 300" role="img">
-        <title>Realtime pond visualization</title>
-        <desc>{createPondDescription(pond)}</desc>
+        <title>{t("overview.visualizationAriaTitle", { ns: "dashboard" })}</title>
+        <desc>{createPondDescription(pond, t, formatters.percentage)}</desc>
         <defs>
           <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#3a8fae" />
@@ -46,9 +50,9 @@ export function PondVisualization({ pond }: { pond: PondState }) {
         <Probe x={300} label="pH" active={pond.sensors.ph >= 7.5 && pond.sensors.ph <= 8.5} />
         <Probe x={360} label="T°" active={pond.sensors.temperature >= 28 && pond.sensors.temperature <= 32} />
 
-        <Pump kind="drain" active={pond.devices.drainagePump} />
-        <Pump kind="intake" active={pond.devices.dilutionPump} />
-        <Feeder active={pond.devices.feeder} />
+        <Pump kind="drain" active={pond.devices.drainagePump} label={t("drainagePump.short", { ns: "devices" })} />
+        <Pump kind="intake" active={pond.devices.dilutionPump} label={t("dilutionPump.short", { ns: "devices" })} />
+        <Feeder active={pond.devices.feeder} label={t("feeder.short", { ns: "devices" })} />
 
         {(pond.devices.buzzer || pond.devices.warningBeacon || pond.status !== "normal") && (
           <g className={`pond-warning pond-warning--${pond.status}`}>
@@ -58,13 +62,13 @@ export function PondVisualization({ pond }: { pond: PondState }) {
         )}
 
         <text x="580" y="256" textAnchor="end" className="pond-level-label">
-          Water level: {Math.round(pond.sensors.waterLevel)}%
+          {t("overview.waterLevelLabel", { ns: "dashboard", value: formatters.percentage(pond.sensors.waterLevel, { maximumFractionDigits: 0 }) })}
         </text>
       </svg>
       <div className="pond-scene__legend" aria-hidden="true">
-        <span><i className="legend-dot legend-dot--info" />Rain and flow</span>
-        <span><i className="legend-dot legend-dot--normal" />Running</span>
-        <span><i className={`legend-dot legend-dot--${pond.status}`} />Pond status</span>
+        <span><i className="legend-dot legend-dot--info" />{t("overview.rainAndFlow", { ns: "dashboard" })}</span>
+        <span><i className="legend-dot legend-dot--normal" />{t("overview.runningLegend", { ns: "dashboard" })}</span>
+        <span><i className={`legend-dot legend-dot--${pond.status}`} />{t("overview.pondStatusLegend", { ns: "dashboard" })}</span>
       </div>
     </div>
   );
@@ -94,12 +98,12 @@ function Probe({ x, label, active }: { x: number; label: string; active: boolean
   );
 }
 
-function Pump({ kind, active }: { kind: "drain" | "intake"; active: boolean }) {
+function Pump({ kind, active, label }: { kind: "drain" | "intake"; active: boolean; label: string }) {
   if (kind === "drain") {
     return (
       <g className={active ? "pond-pump pond-pump--active" : "pond-pump"}>
         <rect x="22" y="115" width="18" height="26" rx="3" />
-        <text x="31" y="153" textAnchor="middle">DRAIN</text>
+        <text x="31" y="153" textAnchor="middle">{label}</text>
         <path d="M40 126 H58" />
       </g>
     );
@@ -108,23 +112,32 @@ function Pump({ kind, active }: { kind: "drain" | "intake"; active: boolean }) {
   return (
     <g className={active ? "pond-pump pond-pump--active" : "pond-pump"}>
       <rect x="580" y="150" width="18" height="30" rx="3" />
-      <text x="589" y="192" textAnchor="middle">INTAKE</text>
+      <text x="589" y="192" textAnchor="middle">{label}</text>
       <path d="M580 165 H562" />
     </g>
   );
 }
 
-function Feeder({ active }: { active: boolean }) {
+function Feeder({ active, label }: { active: boolean; label: string }) {
   return (
     <g className={active ? "pond-feeder pond-feeder--active" : "pond-feeder"} transform="translate(305 84)">
       <path d="M0 -16 L18 -4 L12 15 H-12 L-18 -4 Z" />
-      <text x="0" y="30" textAnchor="middle">FEED</text>
+      <text x="0" y="30" textAnchor="middle">{label}</text>
     </g>
   );
 }
 
-function createPondDescription(pond: PondState): string {
-  return `Pond status ${pond.status}, water level ${Math.round(pond.sensors.waterLevel)} percent, rain ${pond.sensors.rain ? "detected" : "not detected"}.`;
+function createPondDescription(
+  pond: PondState,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  percentage: (value: number, options?: Intl.NumberFormatOptions) => string,
+): string {
+  return t("overview.visualizationDescription", {
+    ns: "dashboard",
+    status: t(`status.${pond.status}`, { ns: "common" }),
+    waterLevel: percentage(pond.sensors.waterLevel, { maximumFractionDigits: 0 }),
+    rain: t(pond.sensors.rain ? "boolean.true" : "boolean.false", { ns: "common" }),
+  });
 }
 
 function clamp(value: number, min: number, max: number): number {

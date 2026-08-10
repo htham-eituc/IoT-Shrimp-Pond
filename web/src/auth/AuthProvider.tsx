@@ -3,11 +3,20 @@ import { AuthContext, type AuthContextValue, type AuthStatus } from "./AuthConte
 import type { AuthenticatedUser } from "../domain";
 import type { DashboardSession } from "../domain/session";
 import type { PondDataSource } from "../data";
+import i18n, { translateError } from "../i18n";
+import { useTranslation } from "react-i18next";
+
+interface AuthErrorState {
+  reason: unknown;
+  fallbackKey: "sessionRestore" | "signIn";
+}
 
 export function AuthProvider({ children, dataSource }: { children: ReactNode; dataSource: PondDataSource }) {
+  const { t } = useTranslation("errors");
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [session, setSession] = useState<DashboardSession | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<AuthErrorState | null>(null);
+  const error = errorState ? translateError(errorState.reason, errorState.fallbackKey, t) : null;
 
   useEffect(() => {
     let active = true;
@@ -21,7 +30,7 @@ export function AuthProvider({ children, dataSource }: { children: ReactNode; da
       .catch((reason: unknown) => {
         if (!active) return;
         setSession(null);
-        setError(reason instanceof Error ? reason.message : "Could not restore the dashboard session.");
+        setErrorState({ reason, fallbackKey: "sessionRestore" });
         setStatus("ready");
       });
 
@@ -32,13 +41,13 @@ export function AuthProvider({ children, dataSource }: { children: ReactNode; da
 
   const signIn = useCallback(async (email: string, password: string) => {
     setStatus("signing-in");
-    setError(null);
+    setErrorState(null);
     try {
       const user = await dataSource.signIn(email, password);
       setSession(createDashboardSession(user));
     } catch (reason) {
       setSession(null);
-      setError(reason instanceof Error ? reason.message : "Sign-in failed.");
+      setErrorState({ reason, fallbackKey: "signIn" });
     } finally {
       setStatus("ready");
     }
@@ -48,7 +57,7 @@ export function AuthProvider({ children, dataSource }: { children: ReactNode; da
     void dataSource.signOut().catch(() => undefined);
     setSession(null);
     setStatus("ready");
-    setError(null);
+    setErrorState(null);
   }, [dataSource]);
 
   const value = useMemo<AuthContextValue>(
@@ -74,7 +83,7 @@ function createDashboardSession(user: AuthenticatedUser): DashboardSession {
     profile: { ...user.profile, role: "farmer" },
     pond: {
       id: user.profile.pondId,
-      name: `Pond ${user.profile.pondId}`,
+      name: i18n.t("pondFallback", { ns: "dashboard", pondId: user.profile.pondId }),
       connected: false,
       mode: "automatic",
     },

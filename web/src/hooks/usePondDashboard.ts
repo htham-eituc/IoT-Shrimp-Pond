@@ -10,6 +10,8 @@ import type {
 } from "../domain";
 import type { PondDataSource } from "../data";
 
+type DashboardErrorKey = "telemetryLoad" | "telemetryRefresh" | "pondSubscribe";
+
 interface DashboardDataState {
   pond: PondState | null;
   settings: PondSettings | null;
@@ -18,7 +20,7 @@ interface DashboardDataState {
   commands: Array<KeyedRecord<Command>>;
   telemetry: Array<KeyedRecord<TelemetryRecord>>;
   loading: boolean;
-  error: string | null;
+  error: DashboardErrorKey | null;
 }
 
 export function usePondDashboard(dataSource: PondDataSource, pondId: string): DashboardDataState {
@@ -28,13 +30,13 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
   const [events, setEvents] = useState<Array<KeyedRecord<PondEvent>>>([]);
   const [commands, setCommands] = useState<Array<KeyedRecord<Command>>>([]);
   const [telemetry, setTelemetry] = useState<Array<KeyedRecord<TelemetryRecord>>>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<DashboardErrorKey | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
-      const onSubscriptionError = (reason: Error) => {
-        setError(reason.message);
+      const onSubscriptionError = () => {
+        setError("pondSubscribe");
         setLoading(false);
       };
       const unsubscribes = [
@@ -54,8 +56,8 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
       void dataSource
         .getTelemetry(pondId, { limit: 24 })
         .then(setTelemetry)
-        .catch((reason: unknown) => {
-          setError(reason instanceof Error ? reason.message : "Could not load telemetry.");
+        .catch(() => {
+          setError("telemetryLoad");
         })
         .finally(() => setLoading(false));
 
@@ -64,10 +66,10 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
           unsubscribe();
         }
       };
-    } catch (reason) {
+    } catch {
       queueMicrotask(() => {
         setLoading(false);
-        setError(reason instanceof Error ? reason.message : "Could not subscribe to pond data.");
+        setError("pondSubscribe");
       });
       return undefined;
     }
@@ -78,8 +80,8 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
     void dataSource
       .getTelemetry(pondId, { limit: 24 })
       .then(setTelemetry)
-      .catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : "Could not refresh telemetry.");
+      .catch(() => {
+        setError("telemetryRefresh");
       });
   }, [dataSource, pond, pondId]);
 

@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { CloudRain, RotateCcw, Save, Settings2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { OperatingMode, PondSettings } from "../domain";
 import type { PondDataSource } from "../data";
-import { validatePondSettings, type SettingsValidationErrors } from "../settings/settingsValidation";
+import { translateError } from "../i18n";
+import { validatePondSettings, type SettingsValidationError, type SettingsValidationErrors } from "../settings/settingsValidation";
+import { ConfirmationDialog } from "./ConfirmationDialog";
 
 interface NumberFieldDefinition {
   key: string;
-  label: string;
   unit?: string;
   step?: number;
   minimum: number;
@@ -15,69 +17,45 @@ interface NumberFieldDefinition {
 
 interface ThresholdGroupDefinition {
   key: keyof PondSettings["thresholds"];
-  label: string;
-  description: string;
   fields: NumberFieldDefinition[];
 }
 
 const THRESHOLD_GROUPS: ThresholdGroupDefinition[] = [
   {
     key: "ph",
-    label: "pH",
-    description: "Acidity and alkalinity operating bands.",
     fields: rangeFields("", 0, 14, 0.1),
   },
   {
     key: "do",
-    label: "Dissolved oxygen",
-    description: "Hypoxia workflow thresholds and sustained trigger time.",
     fields: [
-      field("normalMin", "Normal minimum", "mg/L", 0, 30, 0.1),
-      field("hypoxia", "Hypoxia", "mg/L", 0, 30, 0.1),
-      field("critical", "Critical", "mg/L", 0, 30, 0.1),
-      field("recovery", "Recovery", "mg/L", 0, 30, 0.1),
-      field("triggerDurationSec", "Trigger duration", "seconds", 0, undefined, 1),
+      field("normalMin", "mg/L", 0, 30, 0.1),
+      field("hypoxia", "mg/L", 0, 30, 0.1),
+      field("critical", "mg/L", 0, 30, 0.1),
+      field("recovery", "mg/L", 0, 30, 0.1),
+      field("triggerDurationSec", "seconds", 0, undefined, 1),
     ],
   },
   {
     key: "temperature",
-    label: "Temperature",
-    description: "Normal and warning water-temperature limits.",
     fields: rangeFields("°C", 0, 60, 0.1),
   },
   {
     key: "salinity",
-    label: "Estimated salinity",
-    description: "Salinity bands evaluated by the controller.",
     fields: rangeFields("ppt", 0, 60, 0.1),
   },
   {
     key: "waterLevel",
-    label: "Water level",
-    description: "Normal/warning bands and overflow persistence time.",
     fields: [
       ...rangeFields("%", 0, 100, 1),
-      field("overflowTriggerDurationSec", "Overflow trigger duration", "seconds", 0, undefined, 1),
+      field("overflowTriggerDurationSec", "seconds", 0, undefined, 1),
     ],
   },
 ];
 
 const AUTOMATION_FLAGS = [
-  {
-    key: "hypoxiaResponseEnabled",
-    label: "Hypoxia response",
-    description: "Allow the device to run the configured low-oxygen workflow.",
-  },
-  {
-    key: "rainOverflowResponseEnabled",
-    label: "Rain overflow response",
-    description: "Allow the device to respond when boolean rain and water-level conditions persist.",
-  },
-  {
-    key: "heatSalinityResponseEnabled",
-    label: "Heat and salinity response",
-    description: "Allow the device to run the combined heat/salinity workflow.",
-  },
+  { key: "hypoxiaResponseEnabled" },
+  { key: "rainOverflowResponseEnabled" },
+  { key: "heatSalinityResponseEnabled" },
 ] as const;
 
 interface SettingsViewProps {
@@ -87,11 +65,13 @@ interface SettingsViewProps {
 }
 
 export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps) {
+  const { t } = useTranslation(["common", "settings", "errors"]);
   const [baseline, setBaseline] = useState(settings);
   const [formRevision, setFormRevision] = useState(0);
   const [errors, setErrors] = useState<SettingsValidationErrors>({});
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [pendingSave, setPendingSave] = useState<PondSettings | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,17 +84,23 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
 
     if (Object.keys(validationErrors).length > 0) return;
 
+    setPendingSave(candidate);
+  }
+
+  async function confirmSave() {
+    if (!pendingSave || saving) return;
     setSaving(true);
     try {
       const saved = await dataSource.updateSettings(pondId, {
-        thresholds: candidate.thresholds,
-        automation: candidate.automation,
+        thresholds: pendingSave.thresholds,
+        automation: pendingSave.automation,
       });
       setBaseline(saved);
       setFormRevision((current) => current + 1);
-      setFeedback("Settings saved to the pond configuration.");
+      setFeedback(t("saved", { ns: "settings" }));
+      setPendingSave(null);
     } catch (reason) {
-      setFeedback(reason instanceof Error ? reason.message : "Could not save pond settings.");
+      setFeedback(translateError(reason, "settingsSave", t));
     } finally {
       setSaving(false);
     }
@@ -122,33 +108,33 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
 
   function resetDraft() {
     setErrors({});
-    setFeedback("Unsaved changes reset.");
+    setFeedback(t("resetDone", { ns: "settings" }));
   }
 
   return (
     <div className="view-stack">
       <div className="page-heading page-heading--with-trailing">
         <div>
-          <span className="eyebrow">Settings</span>
-          <h1>Thresholds and automation</h1>
-          <p>These values map directly to the Firebase settings contract and are read by the IoT controller.</p>
+          <span className="eyebrow">{t("eyebrow", { ns: "settings" })}</span>
+          <h1>{t("title", { ns: "settings" })}</h1>
+          <p>{t("description", { ns: "settings" })}</p>
         </div>
-        <span className="settings-mode"><Settings2 aria-hidden="true" /> Mode: {titleCase(settings.mode)}</span>
+        <span className="settings-mode"><Settings2 aria-hidden="true" /> {t("mode", { ns: "settings", mode: t(`mode.${settings.mode}`, { ns: "common" }) })}</span>
       </div>
 
       <aside className="protocol-note">
         <CloudRain aria-hidden="true" />
         <div>
-          <strong>Rain uses a boolean protocol value.</strong>
-          <p>There is no rainfall-rate threshold in Firebase, so this form does not create one.</p>
+          <strong>{t("rainBooleanTitle", { ns: "settings" })}</strong>
+          <p>{t("rainBooleanDescription", { ns: "settings" })}</p>
         </div>
       </aside>
 
       <form key={formRevision} className="settings-form" onSubmit={(event) => void submit(event)} onReset={resetDraft} noValidate>
         {Object.keys(errors).length > 0 && (
           <div className="settings-error-summary" role="alert">
-            <strong>Review {Object.keys(errors).length} invalid {Object.keys(errors).length === 1 ? "field" : "fields"}.</strong>
-            <p>Threshold ordering and physical ranges must be valid before saving.</p>
+            <strong>{t("invalidFields", { ns: "settings", count: Object.keys(errors).length })}</strong>
+            <p>{t("invalidDescription", { ns: "settings" })}</p>
           </div>
         )}
 
@@ -157,8 +143,8 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
             const groupValues = baseline.thresholds[group.key] as unknown as Record<string, number>;
             return (
               <fieldset key={group.key} className="threshold-card">
-                <legend>{group.label}</legend>
-                <p>{group.description}</p>
+                <legend>{t(`groups.${group.key}.label`, { ns: "settings" })}</legend>
+                <p>{t(`groups.${group.key}.description`, { ns: "settings" })}</p>
                 <div className="threshold-fields">
                   {group.fields.map((fieldDefinition) => {
                     const path = `thresholds.${group.key}.${fieldDefinition.key}`;
@@ -179,16 +165,16 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
         </div>
 
         <fieldset className="automation-panel">
-          <legend>Automation workflows</legend>
-          <p>Flags enable or disable device-owned automatic responses. They do not directly operate actuators.</p>
+          <legend>{t("automationTitle", { ns: "settings" })}</legend>
+          <p>{t("automationDescription", { ns: "settings" })}</p>
           <div className="automation-grid">
             {AUTOMATION_FLAGS.map((flag) => (
               <label key={flag.key} className="automation-option">
                 <input type="checkbox" name={`automation.${flag.key}`} defaultChecked={baseline.automation[flag.key]} />
                 <span className="automation-switch" aria-hidden="true" />
                 <span>
-                  <strong>{flag.label}</strong>
-                  <small>{flag.description}</small>
+                  <strong>{t(`automation.${flag.key}.label`, { ns: "settings" })}</strong>
+                  <small>{t(`automation.${flag.key}.description`, { ns: "settings" })}</small>
                 </span>
               </label>
             ))}
@@ -198,13 +184,23 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
         <div className="settings-actions">
           <div className="settings-feedback" aria-live="polite">{feedback}</div>
           <button className="button settings-reset" type="reset" disabled={saving}>
-            <RotateCcw aria-hidden="true" /> Reset
+            <RotateCcw aria-hidden="true" /> {t("reset", { ns: "settings" })}
           </button>
           <button className="button button--primary" type="submit" disabled={saving}>
-            <Save aria-hidden="true" /> {saving ? "Saving…" : "Save settings"}
+            <Save aria-hidden="true" /> {saving ? t("saving", { ns: "settings" }) : t("save", { ns: "settings" })}
           </button>
         </div>
       </form>
+      {pendingSave && (
+        <ConfirmationDialog
+          title={t("confirmTitle", { ns: "settings" })}
+          description={t("confirmDescription", { ns: "settings" })}
+          confirmLabel={saving ? t("saving", { ns: "settings" }) : t("confirmSave", { ns: "settings" })}
+          busy={saving}
+          onConfirm={() => void confirmSave()}
+          onCancel={() => setPendingSave(null)}
+        />
+      )}
     </div>
   );
 }
@@ -218,12 +214,13 @@ function NumberField({
   path: string;
   definition: NumberFieldDefinition;
   defaultValue: number;
-  error?: string;
+  error?: SettingsValidationError;
 }) {
+  const { t } = useTranslation(["settings", "errors"]);
   const errorId = `${path.replaceAll(".", "-")}-error`;
   return (
     <label className="threshold-field">
-      <span>{definition.label}</span>
+      <span>{t(`fields.${definition.key}`, { ns: "settings" })}</span>
       <span className="threshold-input-wrap">
         <input
           type="number"
@@ -236,9 +233,9 @@ function NumberField({
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : undefined}
         />
-        {definition.unit && <small>{definition.unit}</small>}
+        {definition.unit && <small>{definition.unit === "seconds" ? t("seconds", { ns: "settings" }) : definition.unit}</small>}
       </span>
-      {error && <em id={errorId}>{error}</em>}
+      {error && <em id={errorId}>{t(`validation.${error.code}`, { ns: "errors", ...error.values })}</em>}
     </label>
   );
 }
@@ -296,24 +293,19 @@ function readNumber(formData: FormData, path: string): number {
 
 function rangeFields(unit: string, minimum: number, maximum: number, step: number): NumberFieldDefinition[] {
   return [
-    field("normalMin", "Normal minimum", unit, minimum, maximum, step),
-    field("normalMax", "Normal maximum", unit, minimum, maximum, step),
-    field("warningLow", "Warning low", unit, minimum, maximum, step),
-    field("warningHigh", "Warning high", unit, minimum, maximum, step),
+    field("normalMin", unit, minimum, maximum, step),
+    field("normalMax", unit, minimum, maximum, step),
+    field("warningLow", unit, minimum, maximum, step),
+    field("warningHigh", unit, minimum, maximum, step),
   ];
 }
 
 function field(
   key: string,
-  label: string,
   unit: string,
   minimum: number,
   maximum?: number,
   step?: number,
 ): NumberFieldDefinition {
-  return { key, label, unit, minimum, maximum, step };
-}
-
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+  return { key, unit, minimum, maximum, step };
 }

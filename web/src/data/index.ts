@@ -3,7 +3,7 @@ export { FirebasePondDataSource } from "./FirebasePondDataSource";
 export { MockIoTController } from "./MockIoTController";
 export { MockPondDataSource } from "./MockPondDataSource";
 export { createMockPondDatabase, MOCK_NOW_MS } from "./mockDatabase";
-export { deviceDisplayNames, sensorDisplayNames } from "./selectors";
+export { deviceDisplayNames, getDeviceDisplayName, getSensorDisplayName, sensorDisplayNames } from "./selectors";
 export type {
   CreateCommandRequest,
   PondDataSource,

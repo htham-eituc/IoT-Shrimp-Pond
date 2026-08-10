@@ -1,6 +1,24 @@
 import type { PondSettings, RangeThresholdSettings } from "../domain";
 
-export type SettingsValidationErrors = Record<string, string>;
+export type SettingsValidationErrorCode =
+  | "criticalOrder"
+  | "hypoxiaOrder"
+  | "recoveryOrder"
+  | "mode"
+  | "automationBoolean"
+  | "warningLowOrder"
+  | "normalRangeOrder"
+  | "warningHighOrder"
+  | "finiteNumber"
+  | "minimum"
+  | "maximum";
+
+export interface SettingsValidationError {
+  code: SettingsValidationErrorCode;
+  values?: { minimum?: number; maximum?: number };
+}
+
+export type SettingsValidationErrors = Record<string, SettingsValidationError>;
 
 export function validatePondSettings(settings: PondSettings): SettingsValidationErrors {
   const errors: SettingsValidationErrors = {};
@@ -17,22 +35,22 @@ export function validatePondSettings(settings: PondSettings): SettingsValidation
   validateNumber(errors, "thresholds.do.triggerDurationSec", dissolvedOxygen.triggerDurationSec, 0);
 
   if (dissolvedOxygen.critical > dissolvedOxygen.hypoxia) {
-    errors["thresholds.do.critical"] = "Critical must be less than or equal to hypoxia.";
+    errors["thresholds.do.critical"] = { code: "criticalOrder" };
   }
   if (dissolvedOxygen.hypoxia > dissolvedOxygen.normalMin) {
-    errors["thresholds.do.hypoxia"] = "Hypoxia must be less than or equal to normalMin.";
+    errors["thresholds.do.hypoxia"] = { code: "hypoxiaOrder" };
   }
   if (dissolvedOxygen.normalMin > dissolvedOxygen.recovery) {
-    errors["thresholds.do.recovery"] = "Recovery must be greater than or equal to normalMin.";
+    errors["thresholds.do.recovery"] = { code: "recoveryOrder" };
   }
 
   if (settings.mode !== "automatic" && settings.mode !== "manual") {
-    errors.mode = "Mode must be automatic or manual.";
+    errors.mode = { code: "mode" };
   }
 
   for (const [field, value] of Object.entries(settings.automation)) {
     if (typeof value !== "boolean") {
-      errors[`automation.${field}`] = "Automation flags must be boolean values.";
+      errors[`automation.${field}`] = { code: "automationBoolean" };
     }
   }
 
@@ -58,13 +76,13 @@ function validateRange(
   }
 
   if (settings.warningLow > settings.normalMin) {
-    errors[`${path}.warningLow`] = "warningLow must be less than or equal to normalMin.";
+    errors[`${path}.warningLow`] = { code: "warningLowOrder" };
   }
   if (settings.normalMin > settings.normalMax) {
-    errors[`${path}.normalMax`] = "normalMax must be greater than or equal to normalMin.";
+    errors[`${path}.normalMax`] = { code: "normalRangeOrder" };
   }
   if (settings.normalMax > settings.warningHigh) {
-    errors[`${path}.warningHigh`] = "warningHigh must be greater than or equal to normalMax.";
+    errors[`${path}.warningHigh`] = { code: "warningHighOrder" };
   }
 }
 
@@ -76,13 +94,13 @@ function validateNumber(
   maximum?: number,
 ): void {
   if (!Number.isFinite(value)) {
-    errors[path] = "Enter a finite number.";
+    errors[path] = { code: "finiteNumber" };
     return;
   }
   if (value < minimum) {
-    errors[path] = `Value must be at least ${minimum}.`;
+    errors[path] = { code: "minimum", values: { minimum } };
   }
   if (maximum !== undefined && value > maximum) {
-    errors[path] = `Value must be at most ${maximum}.`;
+    errors[path] = { code: "maximum", values: { maximum } };
   }
 }

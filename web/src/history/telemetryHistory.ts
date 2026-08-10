@@ -4,18 +4,17 @@ export type HistoryMetricKey = "ph" | "do" | "temperature" | "waterLevel" | "ec"
 
 export interface HistoryMetricDefinition {
   key: HistoryMetricKey;
-  label: string;
   unit: string;
   decimals: number;
 }
 
 export const HISTORY_METRICS: ReadonlyArray<HistoryMetricDefinition> = [
-  { key: "ph", label: "pH", unit: "", decimals: 2 },
-  { key: "do", label: "Dissolved oxygen", unit: "mg/L", decimals: 2 },
-  { key: "temperature", label: "Temperature", unit: "°C", decimals: 1 },
-  { key: "waterLevel", label: "Water level", unit: "%", decimals: 0 },
-  { key: "ec", label: "Electrical conductivity", unit: "", decimals: 2 },
-  { key: "salinity", label: "Estimated salinity", unit: "ppt", decimals: 1 },
+  { key: "ph", unit: "", decimals: 2 },
+  { key: "do", unit: "mg/L", decimals: 2 },
+  { key: "temperature", unit: "°C", decimals: 1 },
+  { key: "waterLevel", unit: "%", decimals: 0 },
+  { key: "ec", unit: "", decimals: 2 },
+  { key: "salinity", unit: "ppt", decimals: 1 },
 ];
 
 export function chronologicalTelemetry(

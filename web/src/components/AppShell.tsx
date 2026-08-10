@@ -1,50 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import {
-  BellRing,
-  Circle,
-  Gauge,
-  History,
-  LayoutDashboard,
-  LogOut,
-  Settings2,
-  SlidersHorizontal,
-  UserRound,
-  Waves,
-  type LucideIcon,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Circle, LogOut, UserRound, Waves } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { DashboardSession } from "../domain/session";
-import type { CommandDevice, KeyedRecord, PondAlert, PondSettings, PondState, TelemetryRecord } from "../domain";
+import type { KeyedRecord, PondAlert, PondSettings, PondState, TelemetryRecord } from "../domain";
 import type { DemoScenario, PondDataSource } from "../data";
 import { isDemoScenarioSource } from "../data";
 import { usePondDashboard } from "../hooks/usePondDashboard";
+import { useLocaleFormatters } from "../i18n/formatters";
 import { createMetricViewModels } from "../presentation/metrics";
 import { getConnectionPresentation } from "../presentation/connection";
-import { ActiveAlertsPanel } from "./ActiveAlertsPanel";
 import { AlertsEventsView } from "./AlertsEventsView";
+import { CommandCenterView, type DetailView } from "./CommandCenterView";
+import { DetailDrawer } from "./DetailDrawer";
 import { DeviceControlPanel } from "./DeviceControlPanel";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { MetricCard } from "./MetricCard";
-import { PondVisualization } from "./PondVisualization";
 import { SettingsView } from "./SettingsView";
-import { StatusBadge } from "./StatusBadge";
 import { TelemetryHistoryView } from "./TelemetryHistoryView";
-
-type NavKey = "overview" | "realtime" | "control" | "history" | "settings" | "alerts";
-
-const NAV_ITEMS: ReadonlyArray<{ key: NavKey; label: string; icon: LucideIcon }> = [
-  { key: "overview", label: "Overview", icon: LayoutDashboard },
-  { key: "realtime", label: "Realtime", icon: Gauge },
-  { key: "control", label: "Control", icon: SlidersHorizontal },
-  { key: "history", label: "History", icon: History },
-  { key: "settings", label: "Settings / Thresholds", icon: Settings2 },
-  { key: "alerts", label: "Alerts & Events", icon: BellRing },
-];
-
-const DEMO_SCENARIOS: ReadonlyArray<{ key: DemoScenario; label: string }> = [
-  { key: "normal", label: "Normal" },
-  { key: "hypoxia", label: "Hypoxia" },
-  { key: "rain_overflow", label: "Rain overflow" },
-  { key: "heat_salinity", label: "Heat + salinity" },
-];
 
 interface AppShellProps {
   dataSource: PondDataSource;
@@ -53,62 +25,56 @@ interface AppShellProps {
 }
 
 export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
-  const [activeView, setActiveView] = useState<NavKey>("overview");
+  const { t } = useTranslation(["common", "dashboard"]);
+  const formatters = useLocaleFormatters();
+  const [detailView, setDetailView] = useState<DetailView | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<DemoScenario>("normal");
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const dashboard = usePondDashboard(dataSource, session.profile.pondId);
   const currentTimeMs = useCurrentTimeMs();
-  const activeItem = NAV_ITEMS.find((item) => item.key === activeView) ?? NAV_ITEMS[0];
   const demoScenariosEnabled = isDemoScenarioSource(dataSource);
-
-  function onNavKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const currentIndex = NAV_ITEMS.findIndex((item) => item.key === activeView);
-    const lastIndex = NAV_ITEMS.length - 1;
-    let nextIndex = currentIndex;
-
-    if (event.key === "ArrowRight") nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1;
-    if (event.key === "ArrowLeft") nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = lastIndex;
-
-    if (nextIndex !== currentIndex) {
-      event.preventDefault();
-      const nextItem = NAV_ITEMS[nextIndex];
-      setActiveView(nextItem.key);
-      tabRefs.current[nextIndex]?.focus();
-    }
-  }
+  const closeDetail = useCallback(() => setDetailView(null), []);
+  const openDetail = useCallback((view: DetailView) => setDetailView(view), []);
 
   function selectScenario(scenario: DemoScenario) {
     setSelectedScenario(scenario);
-    if (isDemoScenarioSource(dataSource)) {
-      dataSource.setDemoScenario(session.profile.pondId, scenario);
-    }
+    if (isDemoScenarioSource(dataSource)) dataSource.setDemoScenario(session.profile.pondId, scenario);
   }
 
   const pondName = dashboard.pond?.name ?? session.pond.name;
   const connected = dashboard.pond?.connected ?? session.pond.connected;
-  const lastSeenMs = dashboard.pond?.lastSeenMs ?? currentTimeMs;
+  const lastSeenMs = dashboard.pond?.lastSeenMs ?? null;
   const connection = getConnectionPresentation(connected, lastSeenMs ?? 0, currentTimeMs);
   const mode = dashboard.settings?.mode ?? session.pond.mode;
+  const lastSeenText = lastSeenMs === null
+    ? t("unavailable", { ns: "common" })
+    : currentTimeMs === null
+      ? formatters.timestamp(lastSeenMs)
+      : formatters.relativeTime(lastSeenMs, currentTimeMs);
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <a className="brand-lockup" href="#main-content" aria-label="Smart Shrimp Pond dashboard">
-          <span className="brand-mark" aria-hidden="true">
-            <Waves />
-          </span>
+    <div className="app-shell app-shell--command-center">
+      <header className="topbar topbar--command-center">
+        <a className="brand-lockup" href="#main-content" aria-label={t("productAriaLabel", { ns: "common" })}>
+          <span className="brand-mark" aria-hidden="true"><Waves /></span>
           <span>
-            <strong>Smart Shrimp Pond</strong>
-            <small>Aquaculture operations dashboard</small>
+            <strong>{t("brand", { ns: "common" })}</strong>
+            <small>{t("subtitle", { ns: "common" })}</small>
           </span>
         </a>
 
-        <div className="topbar-context" aria-label="Current pond context">
+        <div className="topbar-context topbar-context--command-center" aria-label={t("currentPondContext", { ns: "dashboard" })}>
           <PondIdentity name={pondName} />
-          <StatusPill label={connection.label} tone={connection.tone} />
-          <StatusPill label={titleCase(mode)} tone="info" />
+          <StatusPill
+            label={dashboard.pond ? t(`status.${dashboard.pond.status}`, { ns: "common" }) : t("unavailable", { ns: "common" })}
+            tone={dashboard.pond?.status ?? "offline"}
+          />
+          <StatusPill
+            label={t(`connection.${connection.state}`, { ns: "common" })}
+            helper={t("lastSeenHeader", { ns: "dashboard", time: lastSeenText })}
+            tone={connection.tone}
+          />
+          <StatusPill label={t(`mode.${mode}`, { ns: "common" })} tone="info" />
+          <LanguageSwitcher />
           <div className="operator-chip">
             <UserRound aria-hidden="true" />
             <span>
@@ -116,57 +82,39 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
               <small>{session.profile.pondId}</small>
             </span>
           </div>
-          <button className="icon-button" type="button" onClick={onLogout} aria-label="Log out">
+          <button className="icon-button" type="button" onClick={onLogout} aria-label={t("logout", { ns: "dashboard" })}>
             <LogOut aria-hidden="true" />
           </button>
         </div>
       </header>
 
-      <nav className="app-nav" aria-label="Dashboard navigation">
-        <div className="app-nav-inner" role="tablist" aria-orientation="horizontal" onKeyDown={onNavKeyDown}>
-          {NAV_ITEMS.map(({ key, label, icon: Icon }, index) => (
-            <button
-              key={key}
-              ref={(node) => {
-                tabRefs.current[index] = node;
-              }}
-              className={key === activeView ? "nav-tab nav-tab--active" : "nav-tab"}
-              type="button"
-              role="tab"
-              id={`tab-${key}`}
-              aria-selected={key === activeView}
-              aria-controls={`panel-${key}`}
-              tabIndex={key === activeView ? 0 : -1}
-              onClick={() => setActiveView(key)}
-            >
-              <Icon aria-hidden="true" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      <main className="command-center-main" id="main-content">
+        <DashboardContent
+          dataSource={dataSource}
+          pondId={session.profile.pondId}
+          selectedScenario={selectedScenario}
+          demoScenariosEnabled={demoScenariosEnabled}
+          onScenarioChange={selectScenario}
+          onOpenDetail={openDetail}
+          dashboard={dashboard}
+          currentTimeMs={currentTimeMs}
+        />
+      </main>
 
-      <main className="dashboard-main" id="main-content">
-        <section
-          className="view-panel"
-          id={`panel-${activeView}`}
-          role="tabpanel"
-          aria-labelledby={`tab-${activeView}`}
-          tabIndex={0}
+      {detailView && dashboard.pond && (
+        <DetailDrawer
+          title={t(`nav.${detailView}`, { ns: "dashboard" })}
+          size={["history", "settings", "alerts"].includes(detailView) ? "wide" : "medium"}
+          onClose={closeDetail}
         >
-          <DashboardContent
+          <DetailContent
+            view={detailView}
             dataSource={dataSource}
             pondId={session.profile.pondId}
-            activeView={activeView}
-            activeLabel={activeItem.label}
-            selectedScenario={selectedScenario}
-            demoScenariosEnabled={demoScenariosEnabled}
-            onScenarioChange={selectScenario}
             dashboard={dashboard}
-            currentTimeMs={currentTimeMs}
           />
-        </section>
-      </main>
+        </DetailDrawer>
+      )}
     </div>
   );
 }
@@ -174,162 +122,94 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
 function DashboardContent({
   dataSource,
   pondId,
-  activeView,
-  activeLabel,
   selectedScenario,
   demoScenariosEnabled,
   onScenarioChange,
+  onOpenDetail,
   dashboard,
   currentTimeMs,
 }: {
   dataSource: PondDataSource;
   pondId: string;
-  activeView: NavKey;
-  activeLabel: string;
   selectedScenario: DemoScenario;
   demoScenariosEnabled: boolean;
   onScenarioChange(scenario: DemoScenario): void;
+  onOpenDetail(view: DetailView): void;
   dashboard: ReturnType<typeof usePondDashboard>;
   currentTimeMs: number | null;
 }) {
+  const { t } = useTranslation(["common", "dashboard", "errors"]);
+
   if (dashboard.loading && !dashboard.pond) {
-    return <StatePanel title="Loading pond data" description="Opening Realtime Database subscriptions." tone="info" />;
+    return <StatePanel title={t("loadingPond", { ns: "dashboard" })} description={t("openingSubscriptions", { ns: "dashboard" })} tone="info" />;
   }
-
   if (dashboard.error) {
-    return <StatePanel title="Dashboard data unavailable" description={dashboard.error} tone="critical" />;
+    return (
+      <StatePanel
+        title={t("firebaseUnavailable", { ns: "dashboard" })}
+        description={t("firebaseUnavailableDescription", { ns: "dashboard", reason: t(dashboard.error, { ns: "errors" }) })}
+        tone="critical"
+        action={<button className="button button--primary" type="button" onClick={() => window.location.reload()}>{t("retry", { ns: "common" })}</button>}
+      />
+    );
   }
-
   if (!dashboard.pond) {
-    return <StatePanel title="No pond data" description="No pond state exists for this assigned pond." tone="warning" />;
+    return <StatePanel title={t("noPondData", { ns: "dashboard" })} description={t("noPondDescription", { ns: "dashboard" })} tone="warning" />;
   }
 
-  if (activeView === "overview") {
-    return (
-      <OverviewView
-        pond={dashboard.pond}
-        settingsMode={dashboard.settings?.mode ?? "automatic"}
-        alerts={dashboard.alerts}
-        selectedScenario={selectedScenario}
-        demoScenariosEnabled={demoScenariosEnabled}
-        onScenarioChange={onScenarioChange}
-        currentTimeMs={currentTimeMs}
-      />
-    );
-  }
-
-  if (activeView === "realtime") {
-    return (
-      <RealtimeView
-        pond={dashboard.pond}
-        settings={dashboard.settings}
-        alerts={dashboard.alerts}
-        telemetry={dashboard.telemetry}
-      />
-    );
-  }
-
-  if (activeView === "control") {
-    if (!dashboard.settings) {
-      return <StatePanel title="Settings unavailable" description="Operating mode must be loaded before device commands can be created." tone="warning" />;
-    }
-
-    return (
-      <DeviceControlPanel
-        dataSource={dataSource}
-        pondId={pondId}
-        connected={dashboard.pond.connected}
-        devices={dashboard.pond.devices}
-        settings={dashboard.settings}
-        commands={dashboard.commands}
-      />
-    );
-  }
-
-  if (activeView === "history") {
-    return <TelemetryHistoryView records={dashboard.telemetry} loading={dashboard.loading} />;
-  }
-
-  if (activeView === "settings") {
-    if (!dashboard.settings) {
-      return <StatePanel title="Settings unavailable" description="No Firebase-shaped settings exist for this assigned pond." tone="warning" />;
-    }
-
-    return <SettingsView dataSource={dataSource} pondId={pondId} settings={dashboard.settings} />;
-  }
-
-  if (activeView === "alerts") {
-    return <AlertsEventsView alerts={dashboard.alerts} events={dashboard.events} />;
-  }
-
+  const connection = getConnectionPresentation(dashboard.pond.connected, dashboard.pond.lastSeenMs, currentTimeMs);
   return (
-    <StatePanel title={`${activeLabel} unavailable`} description="This dashboard view could not be selected." tone="warning" />
+    <CommandCenterView
+      dataSource={dataSource}
+      pondId={pondId}
+      pond={dashboard.pond}
+      settings={dashboard.settings}
+      alerts={dashboard.alerts}
+      commands={dashboard.commands}
+      telemetry={dashboard.telemetry}
+      connectionState={connection.state}
+      selectedScenario={selectedScenario}
+      demoScenariosEnabled={demoScenariosEnabled}
+      onScenarioChange={onScenarioChange}
+      onOpenDetail={onOpenDetail}
+    />
   );
 }
 
-function OverviewView({
-  pond,
-  settingsMode,
-  alerts,
-  selectedScenario,
-  demoScenariosEnabled,
-  onScenarioChange,
-  currentTimeMs,
+function DetailContent({
+  view,
+  dataSource,
+  pondId,
+  dashboard,
 }: {
-  pond: PondState;
-  settingsMode: string;
-  alerts: Array<KeyedRecord<PondAlert>>;
-  selectedScenario: DemoScenario;
-  demoScenariosEnabled: boolean;
-  onScenarioChange(scenario: DemoScenario): void;
-  currentTimeMs: number | null;
+  view: DetailView;
+  dataSource: PondDataSource;
+  pondId: string;
+  dashboard: ReturnType<typeof usePondDashboard>;
 }) {
-  const activeAlerts = alerts.filter((alert) => alert.value.status === "active");
-  const runningDevices = Object.values(pond.devices).filter(Boolean).length;
-  const connection = getConnectionPresentation(pond.connected, pond.lastSeenMs, currentTimeMs);
+  const { t } = useTranslation("dashboard");
+  const pond = dashboard.pond;
+  if (!pond) return null;
 
+  if (view === "realtime") {
+    return <RealtimeView pond={pond} settings={dashboard.settings} alerts={dashboard.alerts} telemetry={dashboard.telemetry} />;
+  }
+  if (view === "history") return <TelemetryHistoryView records={dashboard.telemetry} loading={dashboard.loading} />;
+  if (view === "alerts") return <AlertsEventsView alerts={dashboard.alerts} events={dashboard.events} />;
+
+  if (!dashboard.settings) {
+    return <StatePanel title={t("settingsUnavailable")} description={t(view === "control" ? "settingsRequiredForCommands" : "noSettingsDescription")} tone="warning" />;
+  }
+  if (view === "settings") return <SettingsView dataSource={dataSource} pondId={pondId} settings={dashboard.settings} />;
   return (
-    <div className="view-stack">
-      <PageHeading
-        eyebrow="Overview"
-        title={pond.name}
-        description="Live controller-owned pond state, active alerts, and actuator summary."
-        trailing={<StatusBadge label={titleCase(pond.status)} tone={pond.status} />}
-      />
-
-      {demoScenariosEnabled && (
-        <DemoScenarioControls selectedScenario={selectedScenario} onScenarioChange={onScenarioChange} />
-      )}
-
-      <section className="summary-grid summary-grid--overview" aria-label="Overview summary">
-        <SummaryCard label="Connection" value={connection.label} tone={connection.tone} helper={`Last seen ${formatTimestamp(pond.lastSeenMs)}`} />
-        <SummaryCard label="Pond status" value={titleCase(pond.status)} tone={pond.status} />
-        <SummaryCard label="Operating mode" value={titleCase(settingsMode)} tone="info" />
-        <SummaryCard label="Active alerts" value={String(activeAlerts.length)} tone={activeAlerts.some((alert) => alert.value.severity === "critical") ? "critical" : activeAlerts.length > 0 ? "warning" : "normal"} />
-        <SummaryCard label="Actuators" value={`${runningDevices} running`} tone={runningDevices > 0 ? "info" : "normal"} helper={summarizeActuators(pond)} />
-      </section>
-
-      {!pond.connected && (
-        <StatePanel title="Controller disconnected" description="The dashboard is showing the most recent reported pond state." tone="offline" />
-      )}
-
-      {connection.state === "stale" && (
-        <StatePanel title="Controller heartbeat is stale" description="The controller still reports connected, but its last-seen timestamp is older than 30 seconds. Values may be outdated." tone="warning" />
-      )}
-
-      <div className="overview-grid">
-        <section className="panel pond-panel" aria-labelledby="pond-visual-title">
-          <div className="panel-heading panel-heading--bordered">
-            <div>
-              <span className="eyebrow">Pond visualization</span>
-              <h2 id="pond-visual-title">Realtime water and device state</h2>
-            </div>
-          </div>
-          <PondVisualization pond={pond} />
-        </section>
-        <ActiveAlertsPanel alerts={alerts} />
-      </div>
-    </div>
+    <DeviceControlPanel
+      dataSource={dataSource}
+      pondId={pondId}
+      connected={pond.connected}
+      devices={pond.devices}
+      settings={dashboard.settings}
+      commands={dashboard.commands}
+    />
   );
 }
 
@@ -344,81 +224,64 @@ function RealtimeView({
   alerts: Array<KeyedRecord<PondAlert>>;
   telemetry: Array<KeyedRecord<TelemetryRecord>>;
 }) {
+  const { t, i18n } = useTranslation(["dashboard", "sensors"]);
   const metrics = useMemo(
-    () => createMetricViewModels(pond.sensors, settings, alerts, telemetry),
-    [alerts, pond.sensors, settings, telemetry],
+    () => createMetricViewModels(pond.sensors, settings, alerts, telemetry, t, i18n.resolvedLanguage ?? i18n.language),
+    [alerts, i18n.language, i18n.resolvedLanguage, pond.sensors, settings, t, telemetry],
   );
 
   return (
     <div className="view-stack">
       <PageHeading
-        eyebrow="Realtime monitoring"
-        title="Water quality sensors"
-        description="Six hardware inputs are displayed separately from the salinity value derived from EC."
+        eyebrow={t("realtime.eyebrow", { ns: "dashboard" })}
+        title={t("realtime.title", { ns: "dashboard" })}
+        description={t("realtime.description", { ns: "dashboard" })}
       />
       <div className="metric-grid">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.key} metric={metric} />
-        ))}
+        {metrics.map((metric) => <MetricCard key={metric.key} metric={metric} />)}
       </div>
     </div>
   );
 }
 
-function DemoScenarioControls({
-  selectedScenario,
-  onScenarioChange,
-}: {
-  selectedScenario: DemoScenario;
-  onScenarioChange(scenario: DemoScenario): void;
-}) {
-  return (
-    <section className="demo-scenario-panel" aria-label="Demo scenario controls">
-      <span className="eyebrow">Demo control</span>
-      <div className="scenario-buttons">
-        {DEMO_SCENARIOS.map((scenario) => (
-          <button
-            key={scenario.key}
-            className={scenario.key === selectedScenario ? "scenario-button scenario-button--active" : "scenario-button"}
-            type="button"
-            onClick={() => onScenarioChange(scenario.key)}
-          >
-            {scenario.label}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function PondIdentity({ name }: { name: string }) {
+  const { t } = useTranslation("dashboard");
   return (
     <div className="pond-identity">
-      <span className="eyebrow">Current pond</span>
+      <span className="eyebrow">{t("currentPond")}</span>
       <strong>{name}</strong>
     </div>
   );
 }
 
-function StatusPill({ label, tone }: { label: string; tone: "normal" | "warning" | "info" | "offline" }) {
+function StatusPill({
+  label,
+  helper,
+  tone,
+}: {
+  label: string;
+  helper?: string;
+  tone: "normal" | "warning" | "critical" | "info" | "offline";
+}) {
   return (
     <span className={`status-pill status-pill--${tone}`}>
       <Circle aria-hidden="true" />
-      {label}
+      <span>
+        <strong>{label}</strong>
+        {helper && <small>{helper}</small>}
+      </span>
     </span>
   );
 }
 
 function useCurrentTimeMs(): number | null {
   const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
-
   useEffect(() => {
     const updateClock = () => setCurrentTimeMs(Date.now());
     queueMicrotask(updateClock);
     const timer = window.setInterval(updateClock, 5_000);
     return () => window.clearInterval(timer);
   }, []);
-
   return currentTimeMs;
 }
 
@@ -435,58 +298,12 @@ function PageHeading({ eyebrow, title, description, trailing }: { eyebrow: strin
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-  tone,
-  helper,
-}: {
-  label: string;
-  value: string;
-  tone: "normal" | "warning" | "critical" | "info" | "offline";
-  helper?: string;
-}) {
-  return (
-    <article className={`summary-card summary-card--${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {helper && <small>{helper}</small>}
-    </article>
-  );
-}
-
-function StatePanel({ title, description, tone }: { title: string; description: string; tone: "info" | "warning" | "critical" | "offline" }) {
+function StatePanel({ title, description, tone, action }: { title: string; description: string; tone: "info" | "warning" | "critical" | "offline"; action?: ReactNode }) {
   return (
     <div className={`state-panel state-panel--${tone}`} role={tone === "critical" ? "alert" : "status"}>
       <strong>{title}</strong>
       <p>{description}</p>
+      {action}
     </div>
   );
-}
-
-function summarizeActuators(pond: PondState): string {
-  const labels: Record<CommandDevice, string> = {
-    aerator: "aerator",
-    drainagePump: "drainage",
-    dilutionPump: "intake",
-    feeder: "feeder",
-    buzzer: "buzzer",
-    warningBeacon: "beacon",
-  };
-  const activeDevices = (Object.keys(pond.devices) as CommandDevice[]).filter((device) => pond.devices[device]);
-  return activeDevices.length === 0 ? "All inactive" : activeDevices.map((device) => labels[device]).join(", ");
-}
-
-function formatTimestamp(timestampMs: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(timestampMs);
-}
-
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");
 }

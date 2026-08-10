@@ -13,6 +13,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type {
   Command,
   CommandAction,
@@ -22,6 +23,8 @@ import type {
   PondSettings,
 } from "../domain";
 import type { PondDataSource } from "../data";
+import { translateError } from "../i18n";
+import { useLocaleFormatters } from "../i18n/formatters";
 import {
   CONTROLLABLE_DEVICES,
   READ_ONLY_DEVICES,
@@ -35,40 +38,26 @@ import {
 import { StatusBadge } from "./StatusBadge";
 
 interface DeviceDefinition {
-  label: string;
-  description: string;
   icon: LucideIcon;
 }
 
 const DEVICE_DEFINITIONS: Record<ControllableDevice | ReadOnlyDevice, DeviceDefinition> = {
   aerator: {
-    label: "Aerator",
-    description: "Adds oxygen by circulating pond water.",
     icon: Wind,
   },
   drainagePump: {
-    label: "Drainage pump",
-    description: "Removes water during high-level conditions.",
     icon: ArrowDown,
   },
   dilutionPump: {
-    label: "Dilution pump",
-    description: "Adds lower-salinity water to the pond.",
     icon: Droplets,
   },
   feeder: {
-    label: "Feeder",
-    description: "Controls the pond's feeding mechanism.",
     icon: Utensils,
   },
   buzzer: {
-    label: "Alarm buzzer",
-    description: "Controller-owned audible warning output.",
     icon: Bell,
   },
   warningBeacon: {
-    label: "Warning beacon",
-    description: "Controller-owned visual warning output.",
     icon: Lightbulb,
   },
 };
@@ -90,6 +79,7 @@ export function DeviceControlPanel({
   settings,
   commands,
 }: DeviceControlPanelProps) {
+  const { t } = useTranslation(["common", "control", "errors"]);
   const [modeUpdating, setModeUpdating] = useState(false);
   const [modeError, setModeError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<Partial<Record<ControllableDevice, boolean>>>({});
@@ -104,7 +94,7 @@ export function DeviceControlPanel({
     try {
       await updateOperatingMode(dataSource, pondId, mode);
     } catch (reason) {
-      setModeError(reason instanceof Error ? reason.message : "Could not update operating mode.");
+      setModeError(translateError(reason, "modeUpdate", t));
     } finally {
       setModeUpdating(false);
     }
@@ -128,7 +118,7 @@ export function DeviceControlPanel({
     } catch (reason) {
       setCommandErrors((current) => ({
         ...current,
-        [device]: reason instanceof Error ? reason.message : "Could not create the command.",
+        [device]: translateError(reason, "commandCreate", t),
       }));
     } finally {
       locallyPendingDevices.current.delete(device);
@@ -138,38 +128,38 @@ export function DeviceControlPanel({
 
   const automatic = settings.mode === "automatic";
   const controlsDisabledReason = automatic
-    ? "Manual controls are disabled. The IoT controller owns automatic responses in automatic mode."
+    ? t("automaticDisabled", { ns: "control" })
     : !connected
-      ? "Manual controls are unavailable while the IoT controller is disconnected."
+      ? t("disconnectedDisabled", { ns: "control" })
       : null;
 
   return (
     <div className="view-stack">
       <div className="page-heading page-heading--with-trailing">
         <div>
-          <span className="eyebrow">Remote control</span>
-          <h1>Operating mode and devices</h1>
-          <p>Commands request an action; confirmed ON/OFF state always comes back from the IoT controller.</p>
+          <span className="eyebrow">{t("eyebrow", { ns: "control" })}</span>
+          <h1>{t("title", { ns: "control" })}</h1>
+          <p>{t("description", { ns: "control" })}</p>
         </div>
-        <StatusBadge label={automatic ? "Automatic" : "Manual"} tone={automatic ? "info" : "normal"} />
+        <StatusBadge label={t(`mode.${settings.mode}`, { ns: "common" })} tone={automatic ? "info" : "normal"} />
       </div>
 
       <section className="panel mode-panel" aria-labelledby="operating-mode-title">
         <div className="mode-panel__copy">
           <span className="mode-panel__icon" aria-hidden="true"><Cpu /></span>
           <div>
-            <span className="eyebrow">Controller behavior</span>
-            <h2 id="operating-mode-title">Operating mode</h2>
+            <span className="eyebrow">{t("controllerBehavior", { ns: "control" })}</span>
+            <h2 id="operating-mode-title">{t("operatingMode", { ns: "control" })}</h2>
             <p>
               {automatic
-                ? "Automatic workflows evaluate configured thresholds and operate actuators on the device."
-                : "Manual commands are sent to the device and remain pending until controller feedback arrives."}
+                ? t("automaticDescription", { ns: "control" })
+                : t("manualDescription", { ns: "control" })}
             </p>
           </div>
         </div>
 
         <fieldset className="mode-selector" disabled={modeUpdating} aria-busy={modeUpdating}>
-          <legend className="sr-only">Select operating mode</legend>
+          <legend className="sr-only">{t("selectMode", { ns: "control" })}</legend>
           {(["automatic", "manual"] as const).map((mode) => (
             <label key={mode} className={settings.mode === mode ? "mode-option mode-option--active" : "mode-option"}>
               <input
@@ -179,20 +169,20 @@ export function DeviceControlPanel({
                 checked={settings.mode === mode}
                 onChange={() => void changeMode(mode)}
               />
-              <span>{titleCase(mode)}</span>
+              <span>{t(`mode.${mode}`, { ns: "common" })}</span>
             </label>
           ))}
         </fieldset>
 
         <div className="mode-feedback" aria-live="polite">
-          {modeUpdating && <><LoaderCircle className="spin" aria-hidden="true" /> Updating settings…</>}
+          {modeUpdating && <><LoaderCircle className="spin" aria-hidden="true" /> {t("updatingSettings", { ns: "control" })}</>}
           {modeError && <span className="control-error" role="alert">{modeError}</span>}
         </div>
       </section>
 
       {controlsDisabledReason && (
         <div className={`state-panel state-panel--${automatic ? "info" : "offline"}`} role="status">
-          <strong>{automatic ? "Automatic control is active" : "Controller disconnected"}</strong>
+          <strong>{automatic ? t("automaticActive", { ns: "control" }) : t("controllerDisconnected", { ns: "control" })}</strong>
           <p>{controlsDisabledReason}</p>
         </div>
       )}
@@ -200,10 +190,10 @@ export function DeviceControlPanel({
       <section aria-labelledby="manual-devices-title">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">Command-enabled actuators</span>
-            <h2 id="manual-devices-title">Manual device controls</h2>
+            <span className="eyebrow">{t("commandEnabled", { ns: "control" })}</span>
+            <h2 id="manual-devices-title">{t("manualControls", { ns: "control" })}</h2>
           </div>
-          <span className="section-heading__note">Confirmed state from ponds/{pondId}/devices</span>
+          <span className="section-heading__note">{t("confirmedPath", { ns: "control", pondId })}</span>
         </div>
 
         <div className="device-grid">
@@ -228,10 +218,10 @@ export function DeviceControlPanel({
       <section aria-labelledby="safety-devices-title">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">Safety outputs</span>
-            <h2 id="safety-devices-title">Read-only controller state</h2>
+            <span className="eyebrow">{t("safetyOutputs", { ns: "control" })}</span>
+            <h2 id="safety-devices-title">{t("readOnlyState", { ns: "control" })}</h2>
           </div>
-          <span className="section-heading__note">No web controls are exposed</span>
+          <span className="section-heading__note">{t("noWebControls", { ns: "control" })}</span>
         </div>
         <div className="device-grid device-grid--readonly">
           {READ_ONLY_DEVICES.map((device) => (
@@ -260,28 +250,30 @@ function DeviceCommandCard({
   error?: string;
   onRequest(action: CommandAction): void;
 }) {
+  const { t } = useTranslation(["control", "devices"]);
   const definition = DEVICE_DEFINITIONS[device];
   const Icon = definition.icon;
+  const label = t(`${device}.label`, { ns: "devices" });
 
   return (
     <article className={confirmedState ? "device-card device-card--active" : "device-card"}>
       <div className="device-card__header">
         <span className="device-card__icon" aria-hidden="true"><Icon /></span>
-        <StatusBadge label={confirmedState ? "Confirmed ON" : "Confirmed OFF"} tone={confirmedState ? "normal" : "offline"} />
+        <StatusBadge label={t(confirmedState ? "confirmedOn" : "confirmedOff", { ns: "control" })} tone={confirmedState ? "normal" : "offline"} />
       </div>
       <div>
-        <h3>{definition.label}</h3>
-        <p>{definition.description}</p>
+        <h3>{label}</h3>
+        <p>{t(`${device}.description`, { ns: "devices" })}</p>
       </div>
 
-      <div className="device-actions" aria-label={`${definition.label} commands`}>
+      <div className="device-actions" aria-label={t("commandsAriaLabel", { ns: "control", device: label })}>
         <button
           type="button"
           className="device-action device-action--on"
           disabled={disabled || confirmedState}
           onClick={() => onRequest("on")}
         >
-          <Power aria-hidden="true" /> Turn on
+          <Power aria-hidden="true" /> {t("turnOn", { ns: "control" })}
         </button>
         <button
           type="button"
@@ -289,7 +281,7 @@ function DeviceCommandCard({
           disabled={disabled || !confirmedState}
           onClick={() => onRequest("off")}
         >
-          Turn off
+          {t("turnOff", { ns: "control" })}
         </button>
       </div>
 
@@ -299,6 +291,7 @@ function DeviceCommandCard({
 }
 
 function ReadOnlyDeviceCard({ device, confirmedState }: { device: ReadOnlyDevice; confirmedState: boolean }) {
+  const { t } = useTranslation(["common", "control", "devices"]);
   const definition = DEVICE_DEFINITIONS[device];
   const Icon = definition.icon;
 
@@ -306,13 +299,13 @@ function ReadOnlyDeviceCard({ device, confirmedState }: { device: ReadOnlyDevice
     <article className={confirmedState ? "device-card device-card--active device-card--readonly" : "device-card device-card--readonly"}>
       <div className="device-card__header">
         <span className="device-card__icon" aria-hidden="true"><Icon /></span>
-        <StatusBadge label={confirmedState ? "ON" : "OFF"} tone={confirmedState ? "warning" : "offline"} />
+        <StatusBadge label={t(`action.${confirmedState ? "on" : "off"}`, { ns: "common" })} tone={confirmedState ? "warning" : "offline"} />
       </div>
       <div>
-        <h3>{definition.label}</h3>
-        <p>{definition.description}</p>
+        <h3>{t(`${device}.label`, { ns: "devices" })}</h3>
+        <p>{t(`${device}.description`, { ns: "devices" })}</p>
       </div>
-      <span className="read-only-label">Read only · reported by controller</span>
+      <span className="read-only-label">{t("readOnlyReported", { ns: "control" })}</span>
     </article>
   );
 }
@@ -326,12 +319,14 @@ function CommandFeedback({
   pending: boolean;
   error?: string;
 }) {
+  const { t } = useTranslation(["common", "control"]);
+  const formatters = useLocaleFormatters();
   if (error) {
     return <div className="command-feedback command-feedback--failed" role="alert"><XCircle aria-hidden="true" /> <span>{error}</span></div>;
   }
 
   if (!command && !pending) {
-    return <div className="command-feedback command-feedback--idle"><span>No command requested in this session.</span></div>;
+    return <div className="command-feedback command-feedback--idle"><span>{t("noCommand", { ns: "control" })}</span></div>;
   }
 
   const status = pending ? "pending" : command?.value.status;
@@ -340,42 +335,28 @@ function CommandFeedback({
   const content: Record<NonNullable<typeof status>, { icon: ReactNode; label: string }> = {
     pending: {
       icon: <LoaderCircle className="spin" aria-hidden="true" />,
-      label: `Pending${action ? ` · requesting ${action.toUpperCase()}` : ""}`,
+      label: action ? t("requesting", { ns: "control", action: t(`action.${action}`, { ns: "common" }) }) : t("pending", { ns: "control" }),
     },
     completed: {
       icon: <CheckCircle2 aria-hidden="true" />,
-      label: `Completed · requested ${action?.toUpperCase()}`,
+      label: t("completed", { ns: "control", action: action ? t(`action.${action}`, { ns: "common" }) : "" }),
     },
     failed: {
       icon: <XCircle aria-hidden="true" />,
-      label: `Failed · requested ${action?.toUpperCase()}`,
+      label: t("failed", { ns: "control", action: action ? t(`action.${action}`, { ns: "common" }) : "" }),
     },
   };
   const feedback = status ? content[status] : content.pending;
 
   return (
-    <div className={`command-feedback command-feedback--${status ?? "pending"}`} aria-live="polite">
+    <div className={`command-feedback command-feedback--${status ?? "pending"}`} role={status === "failed" ? "alert" : undefined} aria-live="polite">
       {feedback.icon}
       <span>
         <strong>{feedback.label}</strong>
         {timestampMs !== undefined && (
-          <time dateTime={new Date(timestampMs).toISOString()}>{formatTimestamp(timestampMs)}</time>
+          <time dateTime={new Date(timestampMs).toISOString()}>{formatters.timestamp(timestampMs)}</time>
         )}
       </span>
     </div>
   );
-}
-
-function formatTimestamp(timestampMs: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(timestampMs);
-}
-
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

@@ -5,7 +5,6 @@ describe("connection presentation", () => {
   it("keeps explicit disconnection separate from pond severity", () => {
     expect(getConnectionPresentation(false, 1_000, 2_000)).toEqual({
       state: "offline",
-      label: "Offline",
       tone: "offline",
     });
   });
@@ -14,7 +13,6 @@ describe("connection presentation", () => {
     expect(getConnectionPresentation(true, 1_000, 1_000 + DEFAULT_STALE_AFTER_MS)).toMatchObject({ state: "online" });
     expect(getConnectionPresentation(true, 1_000, 1_001 + DEFAULT_STALE_AFTER_MS)).toEqual({
       state: "stale",
-      label: "Stale",
       tone: "warning",
     });
   });

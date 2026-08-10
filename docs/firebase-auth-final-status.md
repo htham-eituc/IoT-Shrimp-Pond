@@ -17,7 +17,7 @@ changed during this QA phase.
 ```text
 Firebase modular Web SDK
   ├─ shared named Firebase app initialization
-  ├─ Firebase Auth (Email/Password + browserLocalPersistence)
+  ├─ Firebase Auth (Email/Password + selected local/session persistence)
   └─ Firebase Realtime Database
        └─ /users/{firebaseUser.uid}
             └─ validated AuthenticatedFarmer
@@ -36,18 +36,22 @@ Firebase pond source reuse the same named Firebase application instance.
 ## Login flow
 
 1. The user submits email and password from the bilingual Login screen.
-2. The password is passed directly to the modular Firebase SDK
+2. The Remember me choice selects Firebase `browserLocalPersistence` or
+   `browserSessionPersistence` before authentication.
+3. The password is passed directly to the modular Firebase SDK
    `signInWithEmailAndPassword` call.
-3. The form clears its password state after the attempt.
-4. Firebase Auth emits the identity through `onAuthStateChanged`.
-5. The application remains in its localized initializing/profile-validation view.
-6. The profile at `/users/{uid}` is loaded and validated.
-7. Only an authorized farmer session may mount the dashboard.
+4. A failed attempt keeps the entered email and password available for correction;
+   a successful SDK sign-in clears the React password state.
+5. Firebase Auth emits the identity through `onAuthStateChanged`.
+6. The application remains in its localized initializing/profile-validation view.
+7. The profile at `/users/{uid}` is loaded and validated.
+8. Only an authorized farmer session may mount the dashboard.
 
 Known Firebase failures are converted to stable application error codes before
 localization. Raw Firebase error messages are not rendered in the production UI.
 Duplicate form submissions are disabled while an authentication request is in
-progress.
+progress. The submit button retains its dimensions, shows a localized spinner and
+status, and never displays a raw Firebase error.
 
 ## Authorization flow
 
@@ -109,14 +113,22 @@ page reload
   -> create fresh dashboard session
 ```
 
-The application does not implement custom token or session storage.
+When Remember me is checked, Firebase local persistence supports restoration after
+the browser is reopened. When it is unchecked, Firebase session persistence ends
+with the browser session. The application does not implement custom token or
+session storage in either mode.
 
 ## Logout and account switching
+
+Sign out is available from the compact account menu. Confirmation initially focuses
+Cancel, traps focus, closes with Escape, and warns when the Settings drawer contains
+unsaved threshold or automation edits. Confirming prevents duplicate actions and
+shows the localized signing-out state.
 
 Logout immediately removes the authorized application session from composition,
 which unmounts the pond dashboard and its subscriptions, then calls Firebase
 `signOut(auth)`. The Login screen appears after Firebase reports the signed-out
-state.
+state; no previous pond snapshot is rendered during that transition.
 
 The authenticated application subtree is keyed by Firebase UID. A different
 account therefore receives a newly mounted AppShell and newly scoped data source.
@@ -166,6 +178,8 @@ Results:
 - No production logging statement records authentication inputs, credentials,
   profiles, or tokens.
 - The Login input uses `type="password"` and `autocomplete="current-password"`.
+- The inputs use stable `email`/`password` names, and the show/hide control changes
+  only the password input type without persisting or clearing its value.
 
 The Firebase web configuration is intentionally supplied to browser code through
 `VITE_FIREBASE_*`. It is not treated as a server secret. Authentication and
@@ -197,9 +211,39 @@ The automated suite covers:
 - fresh data-source state after account switching;
 - Vietnamese and English authentication error messages;
 - duplicate-submission protection.
+- local persistence selection when Remember me is checked;
+- session persistence selection when Remember me is unchecked;
+- no application writes of the password to local or session storage;
+- password-manager-compatible field attributes and localized credential controls.
+- localized idle/submitting/error/login-transition/logout-transition states;
+- interactive-login welcome acknowledgement without repetition on restored sessions;
+- first-pond loading UI that does not substitute zero-valued measurements;
+- neutral account menu and accessible sign-out confirmation semantics.
 
 All of these tests use injected Firebase SDK-boundary adapters and require no real
 credentials.
+
+## Phase 23 focused regression
+
+The focused Phase 23 audit reconfirmed:
+
+- Remember me checked selects Firebase `browserLocalPersistence`;
+- Remember me unchecked selects Firebase `browserSessionPersistence`;
+- session restoration remains gated behind `onAuthStateChanged` and profile
+  authorization, so neither Login nor Dashboard is rendered prematurely;
+- invalid credentials, missing profiles, device roles, malformed profiles, and
+  profile permission failures fail closed with localized messages;
+- Firebase sign-out delegation, observer cleanup, in-flight profile suppression,
+  account switching, and fresh pond-data-source composition remain covered;
+- production code contains no writes of `password`, `idToken`, or `refreshToken`
+  to application `localStorage`, `sessionStorage`, or Realtime Database;
+- the Login fields retain stable `name="email"` / `name="password"` values and
+  `autocomplete="username"` / `autocomplete="current-password"` behavior.
+
+The repository's ignored `web/.env` was detected without reading or printing its
+values. No live farmer/device/denied-account credentials were available, so the
+real Firebase account, browser-close persistence, and live permission-denial matrix
+remain external manual checks rather than claimed test results.
 
 ## Live Firebase verification status
 
@@ -251,7 +295,7 @@ Final results:
 
 - `npm run lint`: passed;
 - `npm run typecheck`: passed;
-- `npm test`: passed, 17 test files and 98 tests;
+- `npm test`: passed, 19 test files and 119 tests;
 - `npm run build`: passed;
 - `git diff --check`: passed.
 

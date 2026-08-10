@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Circle, LogOut, UserRound, Waves } from "lucide-react";
+import { CheckCircle2, Circle, LoaderCircle, LogOut, Waves } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DashboardSession } from "../domain/session";
 import type { KeyedRecord, PondAlert, PondSettings, PondState, TelemetryRecord } from "../domain";
@@ -11,29 +11,56 @@ import { createMetricViewModels } from "../presentation/metrics";
 import { getConnectionPresentation } from "../presentation/connection";
 import { AlertsEventsView } from "./AlertsEventsView";
 import { CommandCenterView, type DetailView } from "./CommandCenterView";
+import { ConfirmationDialog } from "./ConfirmationDialog";
 import { DetailDrawer } from "./DetailDrawer";
 import { DeviceControlPanel } from "./DeviceControlPanel";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { MetricCard } from "./MetricCard";
 import { SettingsView } from "./SettingsView";
 import { TelemetryHistoryView } from "./TelemetryHistoryView";
+import { UserMenu } from "./UserMenu";
 
 interface AppShellProps {
   dataSource: PondDataSource;
   session: DashboardSession;
-  onLogout(): void;
+  showWelcome: boolean;
+  onLogout(): Promise<void>;
 }
 
-export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
-  const { t } = useTranslation(["common", "dashboard"]);
+export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShellProps) {
+  const { t } = useTranslation(["common", "dashboard", "auth"]);
   const formatters = useLocaleFormatters();
   const [detailView, setDetailView] = useState<DetailView | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<DemoScenario>("normal");
+  const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [settingsDirty, setSettingsDirty] = useState(false);
   const dashboard = usePondDashboard(dataSource, session.user.pondId);
   const currentTimeMs = useCurrentTimeMs();
   const demoScenariosEnabled = isDemoScenarioSource(dataSource);
-  const closeDetail = useCallback(() => setDetailView(null), []);
-  const openDetail = useCallback((view: DetailView) => setDetailView(view), []);
+  const closeDetail = useCallback(() => {
+    setDetailView(null);
+    setSettingsDirty(false);
+  }, []);
+  const openDetail = useCallback((view: DetailView) => {
+    if (view !== "settings") setSettingsDirty(false);
+    setDetailView(view);
+  }, []);
+
+  useEffect(() => {
+    if (!welcomeVisible) return;
+    const timer = window.setTimeout(() => setWelcomeVisible(false), 4_500);
+    return () => window.clearTimeout(timer);
+  }, [welcomeVisible]);
+
+  function confirmLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setDetailView(null);
+    setSettingsDirty(false);
+    void onLogout();
+  }
 
   function selectScenario(scenario: DemoScenario) {
     setSelectedScenario(scenario);
@@ -75,30 +102,36 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
           />
           <StatusPill label={t(`mode.${mode}`, { ns: "common" })} tone="info" />
           <LanguageSwitcher />
-          <div className="operator-chip">
-            <UserRound aria-hidden="true" />
-            <span>
-              <strong>{session.user.displayName}</strong>
-              <small>{session.user.pondId}</small>
-            </span>
-          </div>
-          <button className="icon-button" type="button" onClick={onLogout} aria-label={t("logout", { ns: "dashboard" })}>
-            <LogOut aria-hidden="true" />
-          </button>
+          <UserMenu
+            displayName={session.user.displayName}
+            pondId={session.user.pondId}
+            onSignOutRequest={() => setLogoutConfirmationOpen(true)}
+          />
         </div>
       </header>
 
       <main className="command-center-main" id="main-content">
-        <DashboardContent
-          dataSource={dataSource}
-          pondId={session.user.pondId}
-          selectedScenario={selectedScenario}
-          demoScenariosEnabled={demoScenariosEnabled}
-          onScenarioChange={selectScenario}
-          onOpenDetail={openDetail}
-          dashboard={dashboard}
-          currentTimeMs={currentTimeMs}
-        />
+        {welcomeVisible && (
+          <div className="welcome-toast" role="status" aria-live="polite" aria-atomic="true">
+            <CheckCircle2 aria-hidden="true" />
+            <span>
+              <strong>{t("welcomeTitle", { ns: "dashboard", displayName: session.user.displayName })}</strong>
+              <small>{t("welcomeDescription", { ns: "dashboard" })}</small>
+            </span>
+          </div>
+        )}
+        <div className="command-center-stage">
+          <DashboardContent
+            dataSource={dataSource}
+            pondId={session.user.pondId}
+            selectedScenario={selectedScenario}
+            demoScenariosEnabled={demoScenariosEnabled}
+            onScenarioChange={selectScenario}
+            onOpenDetail={openDetail}
+            dashboard={dashboard}
+            currentTimeMs={currentTimeMs}
+          />
+        </div>
       </main>
 
       {detailView && dashboard.pond && (
@@ -112,8 +145,21 @@ export function AppShell({ dataSource, session, onLogout }: AppShellProps) {
             dataSource={dataSource}
             pondId={session.user.pondId}
             dashboard={dashboard}
+            onSettingsDirtyChange={setSettingsDirty}
           />
         </DetailDrawer>
+      )}
+
+      {logoutConfirmationOpen && (
+        <ConfirmationDialog
+          title={t("signOutTitle", { ns: "dashboard" })}
+          description={`${t("signOutDescription", { ns: "dashboard" })}${settingsDirty ? ` ${t("unsavedChanges", { ns: "dashboard" })}` : ""}`}
+          confirmLabel={loggingOut ? t("signingOut", { ns: "auth" }) : t("logout", { ns: "dashboard" })}
+          busy={loggingOut}
+          icon={<LogOut />}
+          onConfirm={confirmLogout}
+          onCancel={() => setLogoutConfirmationOpen(false)}
+        />
       )}
     </div>
   );
@@ -141,7 +187,7 @@ function DashboardContent({
   const { t } = useTranslation(["common", "dashboard", "errors"]);
 
   if (dashboard.loading && !dashboard.pond) {
-    return <StatePanel title={t("loadingPond", { ns: "dashboard" })} description={t("openingSubscriptions", { ns: "dashboard" })} tone="info" />;
+    return <StatePanel title={t("loadingPond", { ns: "dashboard" })} description={t("openingSubscriptions", { ns: "dashboard" })} tone="info" loading />;
   }
   if (dashboard.error) {
     return (
@@ -181,11 +227,13 @@ function DetailContent({
   dataSource,
   pondId,
   dashboard,
+  onSettingsDirtyChange,
 }: {
   view: DetailView;
   dataSource: PondDataSource;
   pondId: string;
   dashboard: ReturnType<typeof usePondDashboard>;
+  onSettingsDirtyChange(dirty: boolean): void;
 }) {
   const { t } = useTranslation("dashboard");
   const pond = dashboard.pond;
@@ -200,7 +248,7 @@ function DetailContent({
   if (!dashboard.settings) {
     return <StatePanel title={t("settingsUnavailable")} description={t(view === "control" ? "settingsRequiredForCommands" : "noSettingsDescription")} tone="warning" />;
   }
-  if (view === "settings") return <SettingsView dataSource={dataSource} pondId={pondId} settings={dashboard.settings} />;
+  if (view === "settings") return <SettingsView dataSource={dataSource} pondId={pondId} settings={dashboard.settings} onDirtyChange={onSettingsDirtyChange} />;
   return (
     <DeviceControlPanel
       dataSource={dataSource}
@@ -298,9 +346,10 @@ function PageHeading({ eyebrow, title, description, trailing }: { eyebrow: strin
   );
 }
 
-function StatePanel({ title, description, tone, action }: { title: string; description: string; tone: "info" | "warning" | "critical" | "offline"; action?: ReactNode }) {
+function StatePanel({ title, description, tone, action, loading = false }: { title: string; description: string; tone: "info" | "warning" | "critical" | "offline"; action?: ReactNode; loading?: boolean }) {
   return (
-    <div className={`state-panel state-panel--${tone}`} role={tone === "critical" ? "alert" : "status"}>
+    <div className={`state-panel state-panel--${tone}`} role={tone === "critical" ? "alert" : "status"} aria-live={tone === "critical" ? "assertive" : "polite"} aria-busy={loading || undefined}>
+      {loading && <LoaderCircle className="spin" aria-hidden="true" />}
       <strong>{title}</strong>
       <p>{description}</p>
       {action}

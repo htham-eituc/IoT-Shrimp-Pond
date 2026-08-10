@@ -109,6 +109,15 @@ mock login or hardcoded account. Set `VITE_DATA_MODE=firebase` to use Realtime
 Database for operational pond data as well. Never put a farmer email or password
 in a Vite environment file.
 
+The Login screen's **Remember me** option delegates persistence to Firebase SDK:
+
+- checked: the Firebase session uses browser local persistence;
+- unchecked: the Firebase session uses browser session persistence.
+
+The application never stores the plaintext password, Firebase ID token, or refresh
+token itself. Email/password fields use standard browser password-manager names and
+autocomplete attributes.
+
 The web data flow is:
 
 ```text

@@ -9,7 +9,7 @@ export function LoadingScreen({ state = "idle" }: LoadingScreenProps) {
   const { t } = useTranslation("auth");
   return (
     <main className="loading-screen" aria-busy="true">
-      <div className="loading-card">
+      <div className="loading-card" role="status" aria-live="polite" aria-atomic="true">
         <span className="brand-mark brand-mark--large" aria-hidden="true">
           <Waves />
         </span>

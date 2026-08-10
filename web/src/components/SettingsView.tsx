@@ -62,9 +62,10 @@ interface SettingsViewProps {
   dataSource: PondDataSource;
   pondId: string;
   settings: PondSettings;
+  onDirtyChange?(dirty: boolean): void;
 }
 
-export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps) {
+export function SettingsView({ dataSource, pondId, settings, onDirtyChange }: SettingsViewProps) {
   const { t } = useTranslation(["common", "settings", "errors"]);
   const [baseline, setBaseline] = useState(settings);
   const [formRevision, setFormRevision] = useState(0);
@@ -72,6 +73,13 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pendingSave, setPendingSave] = useState<PondSettings | null>(null);
+  const [dirty, setDirty] = useState(false);
+
+  function markDirty() {
+    if (dirty) return;
+    setDirty(true);
+    onDirtyChange?.(true);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,6 +107,8 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
       setFormRevision((current) => current + 1);
       setFeedback(t("saved", { ns: "settings" }));
       setPendingSave(null);
+      setDirty(false);
+      onDirtyChange?.(false);
     } catch (reason) {
       setFeedback(translateError(reason, "settingsSave", t));
     } finally {
@@ -109,6 +119,8 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
   function resetDraft() {
     setErrors({});
     setFeedback(t("resetDone", { ns: "settings" }));
+    setDirty(false);
+    onDirtyChange?.(false);
   }
 
   return (
@@ -130,7 +142,7 @@ export function SettingsView({ dataSource, pondId, settings }: SettingsViewProps
         </div>
       </aside>
 
-      <form key={formRevision} className="settings-form" onSubmit={(event) => void submit(event)} onReset={resetDraft} noValidate>
+      <form key={formRevision} className="settings-form" onSubmit={(event) => void submit(event)} onReset={resetDraft} onChange={markDirty} noValidate>
         {Object.keys(errors).length > 0 && (
           <div className="settings-error-summary" role="alert">
             <strong>{t("invalidFields", { ns: "settings", count: Object.keys(errors).length })}</strong>

@@ -28,7 +28,14 @@ export function ConfirmationDialog({
   const dialogRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    const returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancelRef.current?.focus();
+    return () => {
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, []);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !busy) onCancel();
     }

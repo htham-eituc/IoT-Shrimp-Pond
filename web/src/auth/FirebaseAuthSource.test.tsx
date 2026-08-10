@@ -1,7 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import type { Auth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  type Auth,
+} from "firebase/auth";
 import type { Database } from "firebase/database";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LoginScreen } from "../components/LoginScreen";
 import type { UserProfile } from "../domain";
 import { setLocale } from "../i18n";
@@ -16,14 +20,19 @@ const TEST_PROFILE: UserProfile = {
   displayName: "Pond Operator",
 };
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe("FirebaseAuthSource", () => {
   it("uses the Firebase SDK boundary for Email/Password login and validates the profile", async () => {
     const harness = createHarness();
     const states: AuthSessionState[] = [];
     harness.source.observeSession((state) => states.push(state));
 
-    await harness.source.signIn(" farmer@pond.test ", "private-password");
-    expect(harness.adapter.setLocalPersistence).toHaveBeenCalledWith(harness.auth);
+    await harness.source.signIn(" farmer@pond.test ", "private-password", true);
+    expect(harness.adapter.setPersistence).toHaveBeenCalledWith(
+      harness.auth,
+      browserLocalPersistence,
+    );
     expect(harness.adapter.signIn).toHaveBeenCalledWith(
       harness.auth,
       "farmer@pond.test",
@@ -50,6 +59,35 @@ describe("FirebaseAuthSource", () => {
     });
   });
 
+  it("uses Firebase session persistence when Remember me is unchecked", async () => {
+    const harness = createHarness();
+
+    await harness.source.signIn("farmer@pond.test", "private-password", false);
+
+    expect(harness.adapter.setPersistence).toHaveBeenCalledWith(
+      harness.auth,
+      browserSessionPersistence,
+    );
+    expect(harness.adapter.signIn).toHaveBeenCalledWith(
+      harness.auth,
+      "farmer@pond.test",
+      "private-password",
+    );
+  });
+
+  it("never writes the password through application local or session storage", async () => {
+    const localStorage = { setItem: vi.fn(), getItem: vi.fn(), removeItem: vi.fn() };
+    const sessionStorage = { setItem: vi.fn(), getItem: vi.fn(), removeItem: vi.fn() };
+    vi.stubGlobal("window", { localStorage, sessionStorage });
+    const harness = createHarness();
+
+    await harness.source.signIn("farmer@pond.test", "must-not-persist", true);
+
+    expect(localStorage.setItem).not.toHaveBeenCalled();
+    expect(sessionStorage.setItem).not.toHaveBeenCalled();
+    expect(harness.source).not.toHaveProperty("password");
+  });
+
   it("maps invalid credentials without exposing the Firebase message", async () => {
     const firebaseFailure = Object.assign(new Error("Firebase internal detail"), {
       code: "auth/invalid-credential",
@@ -58,7 +96,7 @@ describe("FirebaseAuthSource", () => {
       signIn: vi.fn().mockRejectedValue(firebaseFailure),
     });
 
-    await expect(harness.source.signIn("farmer@pond.test", "wrong"))
+    await expect(harness.source.signIn("farmer@pond.test", "wrong", true))
       .rejects.toMatchObject({ code: "invalid-credentials" });
   });
 
@@ -73,7 +111,7 @@ describe("FirebaseAuthSource", () => {
       ),
     });
 
-    await expect(harness.source.signIn("account@pond.test", "not-logged"))
+    await expect(harness.source.signIn("account@pond.test", "not-logged", false))
       .rejects.toMatchObject({ code: expectedCode });
   });
 
@@ -226,12 +264,38 @@ describe("FirebaseAuthSource", () => {
         emailHint=""
         error={null}
         loading
-        onLogin={async () => undefined}
+        onLogin={async () => true}
       />,
     );
 
     expect(markup).toContain(label);
-    expect((markup.match(/disabled=""/g) ?? [])).toHaveLength(3);
+    expect((markup.match(/disabled=""/g) ?? [])).toHaveLength(5);
+  });
+
+  it.each([
+    ["vi", "Ghi nhớ đăng nhập", "Hiện mật khẩu"],
+    ["en", "Remember me", "Show password"],
+  ] as const)("renders password-manager fields and safe credential controls in %s", async (locale, rememberLabel, showLabel) => {
+    await setLocale(locale, null);
+    const markup = renderToStaticMarkup(
+      <LoginScreen
+        emailHint="operator@pond.test"
+        error={null}
+        loading={false}
+        onLogin={async () => true}
+      />,
+    );
+
+    expect(markup).toContain('type="email"');
+    expect(markup).toContain('name="email"');
+    expect(markup).toContain('autoComplete="username"');
+    expect(markup).toContain('type="password"');
+    expect(markup).toContain('name="password"');
+    expect(markup).toContain('autoComplete="current-password"');
+    expect(markup).toContain('name="rememberMe"');
+    expect(markup).toContain('checked=""');
+    expect(markup).toContain(rememberLabel);
+    expect(markup).toContain(`aria-label="${showLabel}"`);
   });
 });
 
@@ -262,7 +326,7 @@ function createHarness(overrides: Partial<FirebaseAuthAdapter> = {}) {
   const sdkUnsubscribe = vi.fn();
 
   const adapter: FirebaseAuthAdapter = {
-    setLocalPersistence: vi.fn().mockResolvedValue(undefined),
+    setPersistence: vi.fn().mockResolvedValue(undefined),
     signIn: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
     observe: vi.fn((_auth, listener) => {

@@ -40,6 +40,7 @@ function Application() {
     <AuthenticatedApplication
       key={auth.session.user.uid}
       session={auth.session}
+      showWelcome={auth.entryKind === "interactive"}
       onLogout={auth.signOut}
     />
   );
@@ -47,9 +48,11 @@ function Application() {
 
 function AuthenticatedApplication({
   session,
+  showWelcome,
   onLogout,
 }: {
   session: DashboardSession;
+  showWelcome: boolean;
   onLogout(): Promise<void>;
 }) {
   const dataSource = useMemo(
@@ -73,7 +76,8 @@ function AuthenticatedApplication({
     <AppShell
       dataSource={dataSource}
       session={session}
-      onLogout={() => void onLogout()}
+      showWelcome={showWelcome}
+      onLogout={onLogout}
     />
   );
 }

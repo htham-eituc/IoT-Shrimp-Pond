@@ -5,6 +5,7 @@ import { getActiveLocale } from "../i18n";
 
 export type MetricTone = "normal" | "warning" | "critical" | "info" | "offline";
 export type SensorMetricKey = keyof PondSensors;
+export type PrimaryMetricKey = Exclude<SensorMetricKey, "ec" | "salinity"> | "conductivitySalinity";
 
 export interface MetricViewModel {
   key: SensorMetricKey;
@@ -16,6 +17,20 @@ export interface MetricViewModel {
   safeRange: string;
   trend: number[];
 }
+
+export interface ConductivitySalinityMetricViewModel {
+  key: "conductivitySalinity";
+  label: string;
+  salinityLabel: string;
+  conductivityLabel: string;
+  salinity: MetricViewModel;
+  conductivity: MetricViewModel;
+  tone: MetricTone;
+  state: string;
+  trend: number[];
+}
+
+export type PrimaryMetricViewModel = MetricViewModel | ConductivitySalinityMetricViewModel;
 
 export function createMetricViewModels(
   sensors: PondSensors,
@@ -35,6 +50,48 @@ export function createMetricViewModels(
     createMetric("ec", sensors, settings, alerts, telemetry, 1, "", t, locale),
     createMetric("salinity", sensors, settings, alerts, telemetry, 1, "ppt", t, locale),
   ];
+}
+
+export function createPrimaryMetricViewModels(
+  metrics: readonly MetricViewModel[],
+  t: TFunction,
+): PrimaryMetricViewModel[] {
+  const salinity = metrics.find((metric) => metric.key === "salinity");
+  const conductivity = metrics.find((metric) => metric.key === "ec");
+  if (!salinity || !conductivity) return [...metrics];
+
+  const dominant = metricSeverity(salinity.tone) >= metricSeverity(conductivity.tone) ? salinity : conductivity;
+  const composite: ConductivitySalinityMetricViewModel = {
+    key: "conductivitySalinity",
+    label: t("conductivitySalinity.label", { ns: "sensors" }),
+    salinityLabel: t("conductivitySalinity.salinity", { ns: "sensors" }),
+    conductivityLabel: t("conductivitySalinity.conductivity", { ns: "sensors" }),
+    salinity,
+    conductivity,
+    tone: dominant.tone,
+    state: dominant.state,
+    trend: salinity.trend,
+  };
+
+  return [...metrics.filter((metric) => metric.key !== "ec" && metric.key !== "salinity"), composite];
+}
+
+export function isConductivitySalinityMetric(
+  metric: PrimaryMetricViewModel,
+): metric is ConductivitySalinityMetricViewModel {
+  return metric.key === "conductivitySalinity";
+}
+
+export function getPrimaryMetricKeyForSensor(sensor: SensorMetricKey): PrimaryMetricKey {
+  return sensor === "ec" || sensor === "salinity" ? "conductivitySalinity" : sensor;
+}
+
+export function metricSeverity(tone: MetricTone): number {
+  if (tone === "critical") return 4;
+  if (tone === "warning") return 3;
+  if (tone === "normal") return 2;
+  if (tone === "info") return 1;
+  return 0;
 }
 
 function createMetric(

@@ -7,7 +7,7 @@ interface LoginScreenProps {
   emailHint: string;
   error: string | null;
   loading: boolean;
-  onLogin(email: string, password: string, rememberMe: boolean): Promise<void>;
+  onLogin(email: string, password: string, rememberMe: boolean): Promise<boolean>;
 }
 
 export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenProps) {
@@ -18,13 +18,13 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
   const [passwordVisible, setPasswordVisible] = useState(false);
   const emailId = useId();
   const passwordId = useId();
+  const errorId = useId();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
-    try {
-      await onLogin(email, password, rememberMe);
-    } finally {
+    const accepted = await onLogin(email, password, rememberMe);
+    if (accepted) {
       setPassword("");
     }
   }
@@ -60,6 +60,8 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
             onChange={(event) => setEmail(event.target.value)}
             disabled={loading}
             required
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? errorId : undefined}
           />
 
           <label htmlFor={passwordId}>{t("password")}</label>
@@ -73,6 +75,8 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
               onChange={(event) => setPassword(event.target.value)}
               disabled={loading}
               required
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? errorId : undefined}
             />
             <button
               className="login-password-toggle"
@@ -99,7 +103,7 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
           </label>
 
           {error && (
-            <p className="form-error" role="alert">
+            <p id={errorId} className="form-error" role="alert" aria-live="assertive">
               <AlertTriangle aria-hidden="true" />
               {error}
             </p>

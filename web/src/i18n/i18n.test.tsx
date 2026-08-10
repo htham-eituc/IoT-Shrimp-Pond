@@ -22,18 +22,18 @@ describe("application localization", () => {
     await setLocale("vi", null);
 
     const login = renderToStaticMarkup(
-      <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => undefined} />,
+      <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => true} />,
     );
     const source = new MockPondDataSource(TEST_FARMER_ACCESS);
     const shell = renderToStaticMarkup(
-      <AppShell dataSource={source} session={createTestDashboardSession()} onLogout={() => undefined} />,
+      <AppShell dataSource={source} session={createTestDashboardSession()} showWelcome={false} onLogout={async () => undefined} />,
     );
 
     expect(login).toContain("Đăng nhập");
     expect(login).toContain("Mật khẩu");
     expect(shell).toContain("Ao hiện tại");
     expect(shell).toContain("Tự động");
-    expect(shell).toContain("Đang tải dữ liệu ao");
+    expect(shell).toContain("Đang kết nối với ao nuôi…");
     expect(`${login}${shell}`).not.toMatch(/(?:common|auth|dashboard|errors):[\w.]+/);
     source.dispose();
   });
@@ -42,18 +42,18 @@ describe("application localization", () => {
     await setLocale("en", null);
 
     const login = renderToStaticMarkup(
-      <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => undefined} />,
+      <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => true} />,
     );
     const source = new MockPondDataSource(TEST_FARMER_ACCESS);
     const shell = renderToStaticMarkup(
-      <AppShell dataSource={source} session={createTestDashboardSession()} onLogout={() => undefined} />,
+      <AppShell dataSource={source} session={createTestDashboardSession()} showWelcome={false} onLogout={async () => undefined} />,
     );
 
     expect(login).toContain("Sign in");
     expect(login).toContain("Password");
     expect(shell).toContain("Current pond");
     expect(shell).toContain("Automatic");
-    expect(shell).toContain("Loading pond data");
+    expect(shell).toContain("Connecting to pond…");
     expect(`${login}${shell}`).not.toMatch(/(?:common|auth|dashboard|errors):[\w.]+/);
     source.dispose();
   });

@@ -8,7 +8,7 @@ The automated browser matrix covered 40 desktop combinations (five viewports × 
 
 ## One-screen desktop behavior
 
-The primary monitoring screen fits without body/page vertical scrolling at every tested desktop size. The header, language selector, operating mode, active-alert region, seven sensor values, six device states, and 3D pond remain visible together. Secondary charts, configuration, logs, and command details remain in a single contextual drawer.
+The primary monitoring screen fits without body/page vertical scrolling at every tested desktop size. The header, language selector, operating mode, active-alert region, seven sensor values presented in six cards, six device states, and 3D pond remain visible together. Secondary charts, configuration, logs, and command details remain in a single contextual drawer.
 
 | Viewport | VI | EN | Page scroll | Horizontal scroll | 3D quality |
 | --- | --- | --- | --- | --- | --- |
@@ -28,6 +28,36 @@ Tablet and mobile intentionally use page scrolling rather than unreadably small 
 | 768×1024 | Pass in VI and EN | Vertical scrolling; no horizontal overflow | Low |
 | 390×844 | Pass in VI and EN | Vertical scrolling; no horizontal overflow | Low |
 
+### Phase 23 density recheck
+
+After combining EC and salinity, an isolated headless-Chrome regression mounted the
+real authenticated shell components with `MockPondDataSource`. It did not install
+or expose a runtime authentication bypass. The focused matrix passed in VI and EN:
+
+| Viewport | Primary cards | Grid | Page scroll | Horizontal scroll |
+| --- | ---: | --- | --- | --- |
+| 1280×720 | 6 | Balanced 2×3 | None | None |
+| 1366×768 | 6 | Balanced 2×3 | None | None |
+| 1440×900 | 6 | Balanced 2×3 | None | None |
+| 1920×1080 | 6 | Balanced 2×3 | None | None |
+
+Header, alerts, devices, and pond visualization remained visible in all eight
+locale/viewport combinations. At 1366×768 the composite card measured approximately
+254×80 CSS pixels, matching the surrounding card footprint.
+
+## Composite EC and salinity presentation
+
+The compact command-center matrix projects the independent `sensors.ec` and
+`sensors.salinity` fields into one card. Salinity is the emphasized farmer-facing
+value in `ppt`; EC remains visible using the project's existing blank-unit
+convention. No EC unit or database status was invented.
+
+The composite tone is the more severe applicable existing presentation tone. A
+small salinity trend is retained, while the Realtime detail view and History drawer
+continue to expose EC and salinity as separate metrics and telemetry series. EC and
+salinity focus requests resolve to the same primary card without changing either
+underlying value.
+
 ## Supported languages and i18n QA
 
 The application supports exactly Vietnamese (`vi`) and English (`en`), with Vietnamese as the default. The selected locale remains a local UI preference and is not written into the pond protocol.
@@ -40,6 +70,8 @@ QA covered the primary dashboard, realtime details, control details, history, th
 - localized singular/plural history and alert labels;
 - locale-aware number, percentage, timestamp, date, and relative-time formatters;
 - localized accessible names for the language control and operational actions.
+- localized Remember me, Show/Hide password, Signing in, Welcome, account menu,
+  Sign out, sign-out confirmation, and Conductivity / Salinity strings.
 
 Protocol values such as `automatic`, `critical`, `pending`, and `rain_overflow` remain unchanged in data objects and are translated only at presentation boundaries.
 
@@ -110,6 +142,11 @@ All four mock scenarios passed in both languages at all five desktop viewports:
 - **rain_overflow:** boolean rain visible, high water visible, drainage and aeration active, alert visible;
 - **heat_salinity:** abnormal temperature/salinity, dilution intake active, feeder stopped, alert visible.
 
+Focused composite-card tests also project all four scenario states without checking
+scenario names in presentation code. The normal, hypoxia, and rain-overflow inputs
+leave the card normal where their EC/salinity values are normal; heat-salinity raises
+the combined card to warning through the subscribed salinity value and active alert.
+
 Automatic mode kept manual command buttons visible but disabled. Manual mode exposed four controllable actuators. A real browser command check observed:
 
 1. confirmed aerator `OFF`;
@@ -142,6 +179,9 @@ npm run build
 ```
 
 Additional QA used local Vite plus headless Chrome DevTools Protocol at the listed viewports. A separate isolated Chrome process used `--disable-webgl` for fallback verification. Source scans checked JSX user-facing literals and translation namespace parity.
+
+The Phase 23 final suite passed 19 test files and 119 tests. Its focused preflight
+ran 71 auth, i18n, data-source, and composite-card tests before the full suite.
 
 ## Remaining limitations
 

@@ -50,6 +50,8 @@ export const vi = {
     email: "Email",
     password: "Mật khẩu",
     rememberMe: "Ghi nhớ đăng nhập",
+    rememberPersonalDevice: "Chỉ nên bật trên thiết bị cá nhân.",
+    forgetRememberedAccount: "Quên tài khoản này",
     showPassword: "Hiện mật khẩu",
     hidePassword: "Ẩn mật khẩu",
     description: "Đăng nhập bằng tài khoản người nuôi được cấu hình cho môi trường này. Mật khẩu do nhà cung cấp xác thực hiện hành xử lý và không bao giờ được giao diện lưu trữ.",

@@ -262,9 +262,11 @@ describe("FirebaseAuthSource", () => {
     const markup = renderToStaticMarkup(
       <LoginScreen
         emailHint=""
+        initialRememberMe
         error={null}
         loading
         onLogin={async () => true}
+        onForgetRememberedAccount={() => undefined}
       />,
     );
 
@@ -280,9 +282,11 @@ describe("FirebaseAuthSource", () => {
     const markup = renderToStaticMarkup(
       <LoginScreen
         emailHint="operator@pond.test"
+        initialRememberMe
         error={null}
         loading={false}
         onLogin={async () => true}
+        onForgetRememberedAccount={() => undefined}
       />,
     );
 

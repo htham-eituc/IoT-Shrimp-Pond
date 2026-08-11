@@ -5,16 +5,26 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface LoginScreenProps {
   emailHint: string;
+  initialRememberMe: boolean;
   error: string | null;
   loading: boolean;
   onLogin(email: string, password: string, rememberMe: boolean): Promise<boolean>;
+  onForgetRememberedAccount(): void;
 }
 
-export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenProps) {
+export function LoginScreen({
+  emailHint,
+  initialRememberMe,
+  error,
+  loading,
+  onLogin,
+  onForgetRememberedAccount,
+}: LoginScreenProps) {
   const { t } = useTranslation(["auth", "common"]);
   const [email, setEmail] = useState(emailHint);
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(initialRememberMe);
+  const [rememberedAccountVisible, setRememberedAccountVisible] = useState(initialRememberMe && emailHint.length > 0);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const emailId = useId();
   const passwordId = useId();
@@ -59,6 +69,7 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             disabled={loading}
+            autoFocus={!rememberedAccountVisible}
             required
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : undefined}
@@ -74,6 +85,7 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               disabled={loading}
+              autoFocus={rememberedAccountVisible}
               required
               aria-invalid={Boolean(error)}
               aria-describedby={error ? errorId : undefined}
@@ -96,11 +108,37 @@ export function LoginScreen({ emailHint, error, loading, onLogin }: LoginScreenP
               type="checkbox"
               name="rememberMe"
               checked={rememberMe}
-              onChange={(event) => setRememberMe(event.target.checked)}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setRememberMe(checked);
+                if (!checked) {
+                  setRememberedAccountVisible(false);
+                  onForgetRememberedAccount();
+                }
+              }}
               disabled={loading}
             />
-            <span>{t("rememberMe")}</span>
+            <span>
+              {t("rememberMe")}
+              <small>{t("rememberPersonalDevice")}</small>
+            </span>
           </label>
+
+          {rememberedAccountVisible && (
+            <button
+              className="login-forget-account"
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                onForgetRememberedAccount();
+                setRememberMe(false);
+                setRememberedAccountVisible(false);
+                setEmail("");
+              }}
+            >
+              {t("forgetRememberedAccount")}
+            </button>
+          )}
 
           {error && (
             <p id={errorId} className="form-error" role="alert" aria-live="assertive">

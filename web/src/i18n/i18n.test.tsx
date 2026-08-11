@@ -22,7 +22,7 @@ describe("application localization", () => {
     await setLocale("vi", null);
 
     const login = renderToStaticMarkup(
-      <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => true} />,
+      <LoginScreen emailHint="" initialRememberMe error={null} loading={false} onLogin={async () => true} onForgetRememberedAccount={() => undefined} />,
     );
     const source = new MockPondDataSource(TEST_FARMER_ACCESS);
     const shell = renderToStaticMarkup(
@@ -42,7 +42,7 @@ describe("application localization", () => {
     await setLocale("en", null);
 
     const login = renderToStaticMarkup(
-      <LoginScreen emailHint="" error={null} loading={false} onLogin={async () => true} />,
+      <LoginScreen emailHint="" initialRememberMe error={null} loading={false} onLogin={async () => true} onForgetRememberedAccount={() => undefined} />,
     );
     const source = new MockPondDataSource(TEST_FARMER_ACCESS);
     const shell = renderToStaticMarkup(

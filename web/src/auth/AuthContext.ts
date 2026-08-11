@@ -12,8 +12,10 @@ export interface AuthContextValue {
   session: DashboardSession | null;
   error: string | null;
   emailHint: string;
+  rememberLogin: boolean;
   signIn(email: string, password: string, rememberMe: boolean): Promise<boolean>;
   signOut(): Promise<void>;
+  forgetRememberedAccount(): void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

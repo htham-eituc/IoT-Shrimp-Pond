@@ -21,7 +21,7 @@ describe("authentication UX", () => {
   ] as const)("renders a localized, disabled submitting action in %s", async (locale, label) => {
     await setLocale(locale, null);
     const markup = renderToStaticMarkup(
-      <LoginScreen emailHint="operator@example.test" error={null} loading onLogin={async () => true} />,
+      <LoginScreen emailHint="operator@example.test" initialRememberMe error={null} loading onLogin={async () => true} onForgetRememberedAccount={() => undefined} />,
     );
 
     expect(markup).toContain(label);
@@ -37,7 +37,7 @@ describe("authentication UX", () => {
   it("associates a localized login failure with both credential fields", async () => {
     await setLocale("en", null);
     const markup = renderToStaticMarkup(
-      <LoginScreen emailHint="operator@example.test" error="Incorrect email or password." loading={false} onLogin={async () => false} />,
+      <LoginScreen emailHint="operator@example.test" initialRememberMe error="Incorrect email or password." loading={false} onLogin={async () => false} onForgetRememberedAccount={() => undefined} />,
     );
 
     const describedBy = [...markup.matchAll(/aria-describedby="([^"]+)"/g)].map((match) => match[1]);

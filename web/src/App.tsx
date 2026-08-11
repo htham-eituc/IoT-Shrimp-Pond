@@ -29,9 +29,11 @@ function Application() {
     return (
       <LoginScreen
         emailHint={auth.emailHint}
+        initialRememberMe={auth.rememberLogin}
         error={auth.error}
         loading={auth.operation === "submitting"}
         onLogin={auth.signIn}
+        onForgetRememberedAccount={auth.forgetRememberedAccount}
       />
     );
   }

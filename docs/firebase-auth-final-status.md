@@ -30,6 +30,11 @@ Firebase modular Web SDK
 `PondDataSource` owns operational pond data only. `VITE_DATA_MODE` selects mock
 or Firebase pond data after authorization; it cannot select a mock login.
 
+`LoginPreferenceManager` owns only the non-sensitive Login preference
+`{ rememberLogin, lastLoginEmail }`. It is deliberately separate from Firebase
+credentials and commits a new email only after the Auth observer has resolved a
+valid farmer profile.
+
 Firebase initialization exists in one shared module. Both authentication and the
 Firebase pond source reuse the same named Firebase application instance.
 
@@ -45,7 +50,9 @@ Firebase pond source reuse the same named Firebase application instance.
 5. Firebase Auth emits the identity through `onAuthStateChanged`.
 6. The application remains in its localized initializing/profile-validation view.
 7. The profile at `/users/{uid}` is loaded and validated.
-8. Only an authorized farmer session may mount the dashboard.
+8. Only an authorized farmer session may mount the dashboard. At this point—and
+   not when the submit button is clicked—the authenticated Firebase email may be
+   stored if Remember me was selected.
 
 Known Firebase failures are converted to stable application error codes before
 localization. Raw Firebase error messages are not rendered in the production UI.
@@ -116,7 +123,10 @@ page reload
 When Remember me is checked, Firebase local persistence supports restoration after
 the browser is reopened. When it is unchecked, Firebase session persistence ends
 with the browser session. The application does not implement custom token or
-session storage in either mode.
+session storage in either mode. A remembered, previously authorized email is read
+synchronously when the Login screen is created; the password remains empty and
+focus moves to the password field. Without a remembered account, both fields are
+empty and focus starts on email, with no delayed effect-based prefill.
 
 ## Logout and account switching
 
@@ -135,6 +145,12 @@ account therefore receives a newly mounted AppShell and newly scoped data source
 This clears drawer/dialog state, selected demo state, pending component state,
 and previous pond snapshots. The new account's `/users/{uid}` profile is loaded
 again; the earlier account's pond ID is not reused.
+
+Logout intentionally keeps the remembered email preference for the next login.
+The localized **Forget this account** action clears the email and Remember me
+preference without touching browser password-manager storage. An authorized login
+as another farmer replaces the remembered email; failed, denied, or malformed
+accounts cannot overwrite it.
 
 ## Listener cleanup review
 
@@ -171,8 +187,10 @@ Results:
 - `farmer@example` remains only in `Database and Rules.md` as a documentation example.
 - `pond-001` remains in mock IoT/database fixtures, unit tests, Firebase examples,
   and example metadata. It is absent from runtime authentication/session logic.
-- Web `localStorage` access is limited to the locale preference. Firebase SDK owns
-  its internal auth persistence; application code neither reads nor removes its keys.
+- Web `localStorage` access is limited to the locale preference and the
+  non-sensitive remembered-login object `{ rememberLogin, lastLoginEmail }`.
+  Firebase SDK owns its internal auth persistence; application code neither reads
+  nor removes its keys.
 - The web application does not manually store refresh tokens, Firebase ID tokens,
   or access tokens.
 - No production logging statement records authentication inputs, credentials,
@@ -219,6 +237,12 @@ The automated suite covers:
 - interactive-login welcome acknowledgement without repetition on restored sessions;
 - first-pond loading UI that does not substitute zero-valued measurements;
 - neutral account menu and accessible sign-out confirmation semantics.
+- remembered email committed only after successful farmer-profile authorization;
+- failed credentials, device roles, and missing profiles cannot replace a
+  previously authorized email;
+- logout retains the remembered account, while the explicit forget action clears it;
+- synchronous email prefill with an empty password and the appropriate initial
+  focus in both Vietnamese and English.
 
 All of these tests use injected Firebase SDK-boundary adapters and require no real
 credentials.
@@ -244,6 +268,30 @@ The repository's ignored `web/.env` was detected without reading or printing its
 values. No live farmer/device/denied-account credentials were available, so the
 real Firebase account, browser-close persistence, and live permission-denial matrix
 remain external manual checks rather than claimed test results.
+
+## Phase 24 remembered-login QA
+
+The remembered-login lifecycle is now unified with Firebase persistence:
+
+- selecting Remember me requests Firebase local persistence;
+- clearing it requests Firebase session persistence and removes the remembered
+  email preference;
+- an email is written only after Firebase Authentication and `/users/{uid}` farmer
+  authorization both succeed;
+- the email source is the authenticated Firebase user, not untrusted form input;
+- failed credentials, denied device accounts, missing/malformed profiles, logout,
+  and restored-session profile events do not change the remembered account;
+- an authorized account switch replaces the previous email;
+- no application preference contains a password, Firebase ID token, refresh token,
+  User object, or credential object.
+
+An isolated Chromium check confirmed the stable `email`/`password` names, standard
+autocomplete attributes, synchronous remembered-email prefill, empty application
+password state, password-first focus for a remembered account, language-switch
+rerender retention of a browser-style autofilled value, and the forget-account
+behavior. This was a structural and synthetic-autofill check; no real browser
+password-manager prompt or saved credential was used, so that interaction remains
+a manual browser acceptance check.
 
 ## Live Firebase verification status
 
@@ -295,7 +343,7 @@ Final results:
 
 - `npm run lint`: passed;
 - `npm run typecheck`: passed;
-- `npm test`: passed, 19 test files and 119 tests;
+- `npm test`: passed, 20 test files and 130 tests;
 - `npm run build`: passed;
 - `git diff --check`: passed.
 

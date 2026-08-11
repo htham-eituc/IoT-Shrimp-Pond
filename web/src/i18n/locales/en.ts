@@ -48,6 +48,8 @@ export const en = {
     email: "Email",
     password: "Password",
     rememberMe: "Remember me",
+    rememberPersonalDevice: "Recommended only on personal devices.",
+    forgetRememberedAccount: "Forget this account",
     showPassword: "Show password",
     hidePassword: "Hide password",
     description: "Sign in with the farmer account configured for this dashboard environment. Passwords are handled by the active authentication provider and are never stored by the UI.",

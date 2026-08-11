@@ -10,6 +10,7 @@ import type { AuthSource } from "./AuthSource";
 import type { AuthenticatedFarmer, DashboardSession } from "../domain/session";
 import i18n, { translateError } from "../i18n";
 import { useTranslation } from "react-i18next";
+import { LoginPreferenceManager } from "./loginPreferences";
 
 interface AuthErrorState {
   reason: unknown;
@@ -24,12 +25,15 @@ export function AuthProvider({ children, authSource }: { children: ReactNode; au
   const [session, setSession] = useState<DashboardSession | null>(null);
   const [errorState, setErrorState] = useState<AuthErrorState | null>(null);
   const interactiveLoginPending = useRef(false);
+  const [loginPreferenceManager] = useState(() => new LoginPreferenceManager());
+  const [loginPreference, setLoginPreference] = useState(() => loginPreferenceManager.getCurrent());
   const error = errorState ? translateError(errorState.reason, errorState.fallbackKey, t) : null;
 
   useEffect(() => {
     const unsubscribe = authSource.observeSession(
       (state) => {
         if (state.status === "signed-out") {
+          loginPreferenceManager.cancelLoginAttempt();
           interactiveLoginPending.current = false;
           setSession(null);
           setEntryKind(null);
@@ -46,6 +50,9 @@ export function AuthProvider({ children, authSource }: { children: ReactNode; au
         }
 
         setSession(createDashboardSession(state.user));
+        if (interactiveLoginPending.current) {
+          setLoginPreference(loginPreferenceManager.completeAuthorizedFarmer(state.user.email));
+        }
         setEntryKind(interactiveLoginPending.current ? "interactive" : "restored");
         interactiveLoginPending.current = false;
         setErrorState(null);
@@ -53,6 +60,7 @@ export function AuthProvider({ children, authSource }: { children: ReactNode; au
         setOperation("idle");
       },
       (reason) => {
+        loginPreferenceManager.cancelLoginAttempt();
         interactiveLoginPending.current = false;
         setSession(null);
         setEntryKind(null);
@@ -63,16 +71,18 @@ export function AuthProvider({ children, authSource }: { children: ReactNode; au
     );
 
     return unsubscribe;
-  }, [authSource]);
+  }, [authSource, loginPreferenceManager]);
 
   const signIn = useCallback(async (email: string, password: string, rememberMe: boolean) => {
     interactiveLoginPending.current = true;
+    loginPreferenceManager.beginLoginAttempt(rememberMe);
     setOperation("submitting");
     setErrorState(null);
     try {
       await authSource.signIn(email, password, rememberMe);
       return true;
     } catch (reason) {
+      loginPreferenceManager.cancelLoginAttempt();
       interactiveLoginPending.current = false;
       setSession(null);
       setErrorState({ reason, fallbackKey: "signIn" });
@@ -80,10 +90,11 @@ export function AuthProvider({ children, authSource }: { children: ReactNode; au
       setOperation("idle");
       return false;
     }
-  }, [authSource]);
+  }, [authSource, loginPreferenceManager]);
 
   const signOut = useCallback(async () => {
     setErrorState(null);
+    loginPreferenceManager.cancelLoginAttempt();
     interactiveLoginPending.current = false;
     setSession(null);
     setEntryKind(null);
@@ -96,7 +107,11 @@ export function AuthProvider({ children, authSource }: { children: ReactNode; au
       setStatus("unauthenticated");
       setOperation("idle");
     }
-  }, [authSource]);
+  }, [authSource, loginPreferenceManager]);
+
+  const forgetRememberedAccount = useCallback(() => {
+    setLoginPreference(loginPreferenceManager.forget());
+  }, [loginPreferenceManager]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -105,11 +120,13 @@ export function AuthProvider({ children, authSource }: { children: ReactNode; au
       entryKind,
       session,
       error,
-      emailHint: "",
+      emailHint: loginPreference.lastLoginEmail ?? "",
+      rememberLogin: loginPreference.rememberLogin,
       signIn,
       signOut,
+      forgetRememberedAccount,
     }),
-    [entryKind, error, operation, session, signIn, signOut, status],
+    [entryKind, error, forgetRememberedAccount, loginPreference, operation, session, signIn, signOut, status],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

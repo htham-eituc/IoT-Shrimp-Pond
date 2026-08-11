@@ -12,17 +12,25 @@ export function FeederModel({ active, reducedMotion, quality }: { active: boolea
   });
   return (
     <group position={[0, 0.65, -1.1]}>
-      <mesh position={[0, 0.44, 0]}>
-        <cylinderGeometry args={[0.38, 0.22, 0.72, 10]} />
-        <meshStandardMaterial color={active ? "#38caa9" : "#4c6970"} roughness={0.72} />
+      <mesh position={[0, 0.88, 0]} castShadow>
+        <coneGeometry args={[0.46, 0.22, 16]} />
+        <meshStandardMaterial color="#6b8990" roughness={0.56} metalness={0.08} />
       </mesh>
-      <mesh position={[0, 0.04, 0]}>
-        <cylinderGeometry args={[0.1, 0.19, 0.2, 10]} />
-        <meshStandardMaterial color="#718a8e" />
+      <mesh position={[0, 0.44, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.38, 0.24, 0.72, 16]} />
+        <meshStandardMaterial color={active ? "#38caa9" : "#4c6970"} roughness={0.58} metalness={0.08} emissive={active ? "#145c4f" : "#000000"} emissiveIntensity={active ? 0.18 : 0} />
       </mesh>
-      <mesh position={[0, -0.3, 0]}>
+      <mesh position={[0, 0.04, 0]} castShadow>
+        <cylinderGeometry args={[0.1, 0.19, 0.2, 14]} />
+        <meshStandardMaterial color="#8aa0a3" roughness={0.48} metalness={0.18} />
+      </mesh>
+      <mesh position={[0, -0.3, 0]} castShadow>
         <cylinderGeometry args={[0.05, 0.05, 0.62, 8]} />
-        <meshStandardMaterial color="#789399" />
+        <meshStandardMaterial color="#789399" roughness={0.48} metalness={0.14} />
+      </mesh>
+      <mesh position={[0, -0.62, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.16, 0.015, 6, 16]} />
+        <meshStandardMaterial color={active ? "#e7c879" : "#586e71"} roughness={0.58} />
       </mesh>
       {active && (
         <group ref={feedRef} position={[0, -0.12, 0]}>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import i18n from "../i18n";
 import { DEFAULT_STALE_AFTER_MS, getConnectionPresentation } from "./connection";
 
 describe("connection presentation", () => {
@@ -15,5 +16,12 @@ describe("connection presentation", () => {
       state: "stale",
       tone: "warning",
     });
+  });
+
+  it("uses freshness wording that does not over-promise connectivity", () => {
+    expect(i18n.getFixedT("en", "common")("connection.online")).toBe("Live");
+    expect(i18n.getFixedT("en", "common")("connection.stale")).toBe("Data delayed");
+    expect(i18n.getFixedT("vi", "common")("connection.online")).toBe("Đang cập nhật");
+    expect(i18n.getFixedT("vi", "common")("connection.stale")).toBe("Dữ liệu chậm");
   });
 });

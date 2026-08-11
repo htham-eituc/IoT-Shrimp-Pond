@@ -24,18 +24,22 @@ export function MetricCard({ metric, compact = false, id, highlighted = false }:
         title={metric.safeRange}
         tabIndex={0}
       >
-        <span className="metric-card__icon">
-          <Icon aria-hidden="true" />
-        </span>
-        <div className="metric-card__compact-copy">
+        <div className="metric-card__header">
+          <span className="metric-card__icon">
+            <Icon aria-hidden="true" />
+          </span>
           <h3>{metric.label}</h3>
+          <StatusBadge label={metric.state} tone={metric.tone} />
+        </div>
+        <div className="metric-card__body metric-card__compact-copy">
           <p className="metric-card__reading">
             {metric.value}
             {metric.unit && <span>{metric.unit}</span>}
           </p>
         </div>
-        <StatusBadge label={metric.state} tone={metric.tone} />
-        <Sparkline values={metric.trend} tone={metric.tone} />
+        <div className="metric-card__trend">
+          <Sparkline values={metric.trend} tone={metric.tone} />
+        </div>
         <span className="sr-only">{metric.safeRange}</span>
       </article>
     );

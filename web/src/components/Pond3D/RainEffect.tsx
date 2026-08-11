@@ -16,12 +16,24 @@ export function RainEffect({ active, reducedMotion, quality }: { active: boolean
 
   if (!active) return null;
   return (
-    <lineSegments ref={rainRef} position={[0, 1.4, 0]}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <lineBasicMaterial color="#77cbed" transparent opacity={reducedMotion ? 0.48 : 0.76} />
-    </lineSegments>
+    <group>
+      <lineSegments ref={rainRef} position={[0, 1.4, 0]}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial color="#8bdcff" transparent opacity={reducedMotion ? 0.48 : 0.78} />
+      </lineSegments>
+      {quality !== "low" && (
+        <group position={[0, -0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          {[-2.6, -1.1, 0.35, 1.9, 3.1].map((x, index) => (
+            <mesh key={x} position={[x, index % 2 === 0 ? 1.25 : -1.05, 0]}>
+              <ringGeometry args={[0.08 + index * 0.012, 0.1 + index * 0.012, 20]} />
+              <meshBasicMaterial color="#b9f0ff" transparent opacity={0.18} />
+            </mesh>
+          ))}
+        </group>
+      )}
+    </group>
   );
 }
 

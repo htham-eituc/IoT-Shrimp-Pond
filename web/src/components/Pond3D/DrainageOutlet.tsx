@@ -10,9 +10,13 @@ export function DrainageOutlet({ active, reducedMotion }: { active: boolean; red
   });
   return (
     <group position={[-4.65, -0.05, 1.35]}>
-      <mesh rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.2, 0.2, 0.8, 12]} />
-        <meshStandardMaterial color={active ? "#45cfe0" : "#42616c"} roughness={0.65} />
+      <mesh rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.2, 0.2, 0.8, 18]} />
+        <meshStandardMaterial color={active ? "#45cfe0" : "#42616c"} roughness={0.5} metalness={0.18} emissive={active ? "#0d6270" : "#000000"} emissiveIntensity={active ? 0.24 : 0} />
+      </mesh>
+      <mesh position={[-0.42, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <torusGeometry args={[0.22, 0.035, 8, 18]} />
+        <meshStandardMaterial color="#8aa8ae" roughness={0.42} metalness={0.22} />
       </mesh>
       {active && (
         <group ref={flowRef} position={[-0.22, 0, 0]}>
@@ -25,6 +29,10 @@ export function DrainageOutlet({ active, reducedMotion }: { active: boolean; red
           <mesh position={[-0.45, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
             <coneGeometry args={[0.13, 0.32, 8]} />
             <meshBasicMaterial color="#65d9ec" transparent opacity={0.82} />
+          </mesh>
+          <mesh position={[-0.1, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <coneGeometry args={[0.28, 1.1, 24, 1, true]} />
+            <meshBasicMaterial color="#65d9ec" transparent opacity={0.12} />
           </mesh>
         </group>
       )}

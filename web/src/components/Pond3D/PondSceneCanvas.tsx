@@ -6,6 +6,7 @@ import { createPondSceneModel } from "./pondSceneModel";
 import type { PondProbeReading } from "./pondSceneModel";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import { usePond3DQuality } from "./pondQuality";
+import { POND_CAMERA_FAR, POND_CAMERA_FOV, POND_CAMERA_NEAR, POND_CAMERA_POSITION } from "./pondCamera";
 
 const QUALITY_CONFIG = {
   high: { dpr: [1, 1.75] as [number, number], antialias: true },
@@ -31,10 +32,15 @@ export default function PondSceneCanvas({ pond, probes, onFailure }: { pond: Pon
   return (
     <div className="pond-3d__canvas" data-quality={quality} data-reduced-motion={reducedMotion ? "true" : "false"} aria-hidden="true">
       <Canvas
-        camera={{ fov: 37, near: 0.1, far: 45, position: [8.7, 6.6, 8.4] }}
+        camera={{ fov: POND_CAMERA_FOV, near: POND_CAMERA_NEAR, far: POND_CAMERA_FAR, position: [...POND_CAMERA_POSITION] }}
         dpr={qualityConfig.dpr}
         frameloop={animated ? "always" : "demand"}
-        gl={{ antialias: qualityConfig.antialias, alpha: false, powerPreference: quality === "high" ? "high-performance" : "low-power" }}
+        shadows={quality !== "low" ? "percentage" : false}
+        gl={{
+          antialias: qualityConfig.antialias,
+          alpha: false,
+          powerPreference: quality === "high" ? "high-performance" : "low-power",
+        }}
       >
         <PondScene model={model} probes={probes} reducedMotion={reducedMotion} quality={quality} onFailure={onFailure} />
       </Canvas>

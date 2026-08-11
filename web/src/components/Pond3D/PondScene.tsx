@@ -26,7 +26,7 @@ export function PondScene({ model, probes, reducedMotion, quality, onFailure }: 
       <CameraRig />
       <PondEnvironment />
       <PondBasin />
-      <WaterSurface surfaceY={model.waterSurfaceY} rain={model.rain} animate={animatedWater} reducedMotion={reducedMotion} />
+      <WaterSurface surfaceY={model.waterSurfaceY} rain={model.rain} animate={animatedWater} reducedMotion={reducedMotion} quality={quality} />
       <WaterBoundEquipment targetY={model.waterSurfaceY} reducedMotion={reducedMotion}>
         <AeratorModel position={[-2.5, 0.03, 0.55]} active={model.devices.aerator} reducedMotion={reducedMotion} quality={quality} />
         <AeratorModel position={[2.5, 0.03, 0.55]} active={model.devices.aerator} reducedMotion={reducedMotion} quality={quality} />

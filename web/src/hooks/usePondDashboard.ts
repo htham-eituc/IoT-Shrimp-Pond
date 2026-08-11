@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Command,
   KeyedRecord,
@@ -23,82 +23,177 @@ interface DashboardDataState {
   error: DashboardErrorKey | null;
 }
 
+export interface ScopedDashboardState extends DashboardDataState {
+  dataSource: PondDataSource;
+  pondId: string;
+}
+
 export function usePondDashboard(dataSource: PondDataSource, pondId: string): DashboardDataState {
-  const [pond, setPond] = useState<PondState | null>(null);
-  const [settings, setSettings] = useState<PondSettings | null>(null);
-  const [alerts, setAlerts] = useState<Array<KeyedRecord<PondAlert>>>([]);
-  const [events, setEvents] = useState<Array<KeyedRecord<PondEvent>>>([]);
-  const [commands, setCommands] = useState<Array<KeyedRecord<Command>>>([]);
-  const [telemetry, setTelemetry] = useState<Array<KeyedRecord<TelemetryRecord>>>([]);
-  const [error, setError] = useState<DashboardErrorKey | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<ScopedDashboardState>(() => createLoadingState(dataSource, pondId));
+  const telemetryRequestSequence = useRef(0);
+  const stateMatchesRequest = state.dataSource === dataSource && state.pondId === pondId;
+  const visibleState = stateMatchesRequest ? state : createLoadingState(dataSource, pondId);
 
   useEffect(() => {
+    let active = true;
+    const scope = { dataSource, pondId };
+    const commit = (changes: Partial<DashboardDataState>) => {
+      if (!active) return;
+      setState((current) => {
+        if (isCurrentDashboardScope(current, scope)) {
+          return applyScopedDashboardUpdate(current, scope, changes);
+        }
+        return { ...createLoadingState(dataSource, pondId), ...changes };
+      });
+    };
+
     try {
       const onSubscriptionError = () => {
-        setError("pondSubscribe");
-        setLoading(false);
+        commit({ error: "pondSubscribe", loading: false });
       };
       const unsubscribes = [
-        dataSource.subscribePond(pondId, setPond, onSubscriptionError),
-        dataSource.subscribeSettings(pondId, setSettings, onSubscriptionError),
+        dataSource.subscribePond(pondId, (nextPond) => {
+          commit({ pond: nextPond });
+        }, onSubscriptionError),
+        dataSource.subscribeSettings(pondId, (nextSettings) => {
+          commit({ settings: nextSettings });
+        }, onSubscriptionError),
         dataSource.subscribeAlerts(pondId, (nextAlerts) => {
-          setAlerts(sortKeyedRecordsByCreatedAt(nextAlerts));
+          commit({ alerts: sortKeyedRecordsByCreatedAt(nextAlerts) });
         }, onSubscriptionError),
         dataSource.subscribeEvents(pondId, (nextEvents) => {
-          setEvents(sortKeyedRecordsByCreatedAt(nextEvents));
+          commit({ events: sortKeyedRecordsByCreatedAt(nextEvents) });
         }, onSubscriptionError),
         dataSource.subscribeCommands(pondId, (nextCommands) => {
-          setCommands(sortKeyedRecordsByCreatedAt(nextCommands));
+          commit({ commands: sortKeyedRecordsByCreatedAt(nextCommands) });
         }, onSubscriptionError),
       ];
 
+      const telemetryRequestId = ++telemetryRequestSequence.current;
       void dataSource
         .getTelemetry(pondId, { limit: 24 })
-        .then(setTelemetry)
-        .catch(() => {
-          setError("telemetryLoad");
+        .then((nextTelemetry) => {
+          if (telemetryRequestSequence.current !== telemetryRequestId) return;
+          commit({ telemetry: nextTelemetry });
         })
-        .finally(() => setLoading(false));
+        .catch(() => {
+          if (telemetryRequestSequence.current !== telemetryRequestId) return;
+          commit({ error: "telemetryLoad" });
+        })
+        .finally(() => {
+          if (telemetryRequestSequence.current !== telemetryRequestId) return;
+          commit({ loading: false });
+        });
 
       return () => {
+        active = false;
         for (const unsubscribe of unsubscribes) {
           unsubscribe();
         }
       };
     } catch {
       queueMicrotask(() => {
-        setLoading(false);
-        setError("pondSubscribe");
+        commit({ loading: false, error: "pondSubscribe" });
       });
-      return undefined;
+      return () => {
+        active = false;
+      };
     }
   }, [dataSource, pondId]);
 
   useEffect(() => {
-    if (!pond) return;
+    if (!visibleState.pond) return;
+    let active = true;
+    const scope = { dataSource, pondId };
+    const telemetryRequestId = ++telemetryRequestSequence.current;
     void dataSource
       .getTelemetry(pondId, { limit: 24 })
-      .then(setTelemetry)
+      .then((nextTelemetry) => {
+        if (!active || telemetryRequestSequence.current !== telemetryRequestId) return;
+        setState((current) => (
+          isCurrentScope(current, scope)
+            ? { ...current, telemetry: nextTelemetry }
+            : current
+        ));
+      })
       .catch(() => {
-        setError("telemetryRefresh");
+        if (!active || telemetryRequestSequence.current !== telemetryRequestId) return;
+        setState((current) => (
+          isCurrentScope(current, scope)
+            ? { ...current, error: "telemetryRefresh" }
+            : current
+        ));
+      })
+      .finally(() => {
+        if (!active || telemetryRequestSequence.current !== telemetryRequestId) return;
+        setState((current) => (
+          isCurrentScope(current, scope)
+            ? { ...current, loading: false }
+            : current
+        ));
       });
-  }, [dataSource, pond, pondId]);
+    return () => {
+      active = false;
+    };
+  }, [dataSource, pondId, visibleState.pond]);
 
   return useMemo(
     () => ({
-      pond,
-      settings,
-      alerts,
-      events,
-      commands,
-      telemetry,
-      loading,
-      error,
+      pond: visibleState.pond,
+      settings: visibleState.settings,
+      alerts: visibleState.alerts,
+      events: visibleState.events,
+      commands: visibleState.commands,
+      telemetry: visibleState.telemetry,
+      loading: visibleState.loading,
+      error: visibleState.error,
     }),
-    [alerts, commands, error, events, loading, pond, settings, telemetry],
+    [
+      visibleState.alerts,
+      visibleState.commands,
+      visibleState.error,
+      visibleState.events,
+      visibleState.loading,
+      visibleState.pond,
+      visibleState.settings,
+      visibleState.telemetry,
+    ],
   );
 }
+
+export function createScopedDashboardLoadingState(dataSource: PondDataSource, pondId: string): ScopedDashboardState {
+  return {
+    dataSource,
+    pondId,
+    pond: null,
+    settings: null,
+    alerts: [],
+    events: [],
+    commands: [],
+    telemetry: [],
+    loading: true,
+    error: null,
+  };
+}
+
+export function isCurrentDashboardScope(
+  current: ScopedDashboardState,
+  scope: { dataSource: PondDataSource; pondId: string },
+): boolean {
+  return current.dataSource === scope.dataSource && current.pondId === scope.pondId;
+}
+
+export function applyScopedDashboardUpdate(
+  current: ScopedDashboardState,
+  scope: { dataSource: PondDataSource; pondId: string },
+  changes: Partial<DashboardDataState>,
+): ScopedDashboardState {
+  if (!isCurrentDashboardScope(current, scope)) return current;
+  return { ...current, ...changes };
+}
+
+const createLoadingState = createScopedDashboardLoadingState;
+const isCurrentScope = isCurrentDashboardScope;
 
 function sortKeyedRecordsByCreatedAt<T extends { createdAtMs: number }>(records: Array<KeyedRecord<T>>): Array<KeyedRecord<T>> {
   return [...records].sort((left, right) => right.value.createdAtMs - left.value.createdAtMs);

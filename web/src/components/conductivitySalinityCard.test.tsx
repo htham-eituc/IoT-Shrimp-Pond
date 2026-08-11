@@ -11,6 +11,7 @@ import {
   isConductivitySalinityMetric,
 } from "../presentation/metrics";
 import { ConductivitySalinityCard } from "./ConductivitySalinityCard";
+import { MetricCard } from "./MetricCard";
 import { TEST_FARMER_ACCESS } from "../test/fixtures";
 
 afterEach(async () => setLocale("vi", null));
@@ -54,6 +55,34 @@ describe("combined conductivity and salinity presentation", () => {
     expect(initial).toEqual(original);
     expect(initial).toHaveProperty("ec", 18.4);
     expect(initial).toHaveProperty("salinity", 20.1);
+  });
+
+  it("keeps the composite trend in the shared card footer slot instead of the reading row", async () => {
+    await setLocale("en", null);
+    const composite = createComposite(createSensors({ ec: 18.4, salinity: 20.1 }));
+    const markup = renderToStaticMarkup(<ConductivitySalinityCard metric={composite} />);
+
+    expect(markup).toContain("metric-card__header");
+    expect(markup).toContain("metric-card__body metric-card__composite-copy");
+    expect(markup).toContain("metric-card__trend");
+    expect(markup.indexOf("metric-card__trend")).toBeGreaterThan(markup.indexOf("</dl>"));
+  });
+
+  it("uses the same header, body, and trend slots for all six primary compact cards", async () => {
+    await setLocale("en", null);
+    const primary = createPrimaryMetricViewModels(createMetrics(createSensors({ ec: 18.4, salinity: 20.1 })), i18n.t);
+    const markups = primary.map((metric) => isConductivitySalinityMetric(metric)
+      ? renderToStaticMarkup(<ConductivitySalinityCard metric={metric} />)
+      : renderToStaticMarkup(<MetricCard metric={metric} compact />));
+
+    expect(markups).toHaveLength(6);
+    for (const markup of markups) {
+      expect(markup).toContain("metric-card__header");
+      expect(markup).toContain("metric-card__body");
+      expect(markup).toContain("metric-card__trend");
+      expect(markup.indexOf("metric-card__header")).toBeLessThan(markup.indexOf("metric-card__body"));
+      expect(markup.indexOf("metric-card__body")).toBeLessThan(markup.indexOf("metric-card__trend"));
+    }
   });
 
   it("uses the more severe applicable source status and reduces the primary matrix by one card", async () => {

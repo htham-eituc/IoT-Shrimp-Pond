@@ -21,7 +21,7 @@ export const en = {
       completed: "Completed",
       failed: "Failed",
     },
-    connection: { online: "Online", stale: "Stale", offline: "Offline" },
+    connection: { online: "Live", stale: "Data delayed", offline: "Offline" },
     mode: { automatic: "Automatic", manual: "Manual" },
     action: { on: "ON", off: "OFF" },
     boolean: { true: "Yes", false: "No" },

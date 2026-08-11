@@ -23,6 +23,28 @@ describe("MockPondDataSource", () => {
     expect(snapshots).toEqual(["Smart Shrimp Pond 001", "North Nursery Pond"]);
   });
 
+  it("does not keep duplicate pond listeners after unsubscribe and remount", async () => {
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
+    const snapshots: Array<string | undefined> = [];
+    const firstUnsubscribe = source.subscribePond("pond-001", (pond) => {
+      snapshots.push(`first:${pond?.name}`);
+    });
+    firstUnsubscribe();
+
+    const secondUnsubscribe = source.subscribePond("pond-001", (pond) => {
+      snapshots.push(`second:${pond?.name}`);
+    });
+    await source.updatePondName("pond-001", "Remounted Pond");
+    secondUnsubscribe();
+    await source.updatePondName("pond-001", "Should Not Emit");
+
+    expect(snapshots).toEqual([
+      "first:Smart Shrimp Pond 001",
+      "second:Smart Shrimp Pond 001",
+      "second:Remounted Pond",
+    ]);
+  });
+
   it("allows settings changes without touching device-owned pond state", async () => {
     const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => MOCK_NOW_MS);
     const before = source.getDatabaseSnapshot().ponds["pond-001"];
@@ -189,7 +211,7 @@ describe("MockPondDataSource", () => {
       timestampMs: MOCK_NOW_MS + 5_000,
       rain: false,
     });
-    expect(telemetry[0].value.do).toBeLessThan(4);
+    expect(telemetry[0].value.do).toBeGreaterThan(criticalSnapshot.ponds["pond-001"].sensors.do);
     source.dispose();
   });
 
@@ -209,6 +231,23 @@ describe("MockPondDataSource", () => {
       expect.objectContaining({ type: "rain_overflow", status: "active" }),
     );
     expect(source.getDemoScenarioState().rainIntensityMmPerHour).toBeGreaterThan(0);
+    source.dispose();
+  });
+
+  it("closed-loop rain overflow drains water after the drainage pump activates", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
+
+    source.setDemoScenario("pond-001", "rain_overflow");
+    const overflowLevel = source.getDatabaseSnapshot().ponds["pond-001"].sensors.waterLevel;
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.drainagePump).toBe(true);
+
+    nowMs += 5_000;
+    await vi.advanceTimersByTimeAsync(5_000);
+    const recoveredLevel = source.getDatabaseSnapshot().ponds["pond-001"].sensors.waterLevel;
+
+    expect(recoveredLevel).toBeLessThan(overflowLevel);
     source.dispose();
   });
 
@@ -258,6 +297,24 @@ describe("MockPondDataSource", () => {
     source.dispose();
   });
 
+  it("closed-loop heat salinity dilution lowers salinity and EC over time", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
+
+    source.setDemoScenario("pond-001", "heat_salinity");
+    const initial = source.getDatabaseSnapshot().ponds["pond-001"].sensors;
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.dilutionPump).toBe(true);
+
+    nowMs += 5_000;
+    await vi.advanceTimersByTimeAsync(5_000);
+    const afterDilution = source.getDatabaseSnapshot().ponds["pond-001"].sensors;
+
+    expect(afterDilution.salinity).toBeLessThan(initial.salinity);
+    expect(afterDilution.ec).toBeLessThan(initial.ec);
+    source.dispose();
+  });
+
   it("recovers active scenario alerts when normal conditions return", async () => {
     vi.useFakeTimers();
     let nowMs = MOCK_NOW_MS;
@@ -268,8 +325,9 @@ describe("MockPondDataSource", () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(Object.values(source.getDatabaseSnapshot().alerts["pond-001"]).some((alert) => alert.status === "active")).toBe(true);
 
-    nowMs += 1_000;
     source.setDemoScenario("pond-001", "normal");
+    nowMs += 5_000;
+    await vi.advanceTimersByTimeAsync(5_000);
     const snapshot = source.getDatabaseSnapshot();
 
     expect(snapshot.ponds["pond-001"].sensors.do).toBeGreaterThan(5.5);
@@ -278,6 +336,64 @@ describe("MockPondDataSource", () => {
     expect(Object.values(snapshot.events["pond-001"])).toContainEqual(
       expect.objectContaining({ type: "workflow_resolved", source: "automatic" }),
     );
+    source.dispose();
+  });
+
+  it("closed-loop manual aeration gradually improves DO in manual mode", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
+    await source.updateSettings("pond-001", { mode: "manual" });
+    const before = source.getDatabaseSnapshot().ponds["pond-001"].sensors.do;
+
+    await source.createCommand("pond-001", { device: "aerator", action: "on", createdAtMs: nowMs });
+    nowMs += 350;
+    await vi.advanceTimersByTimeAsync(350);
+    nowMs += 5_000;
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    const after = source.getDatabaseSnapshot().ponds["pond-001"].sensors.do;
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.aerator).toBe(true);
+    expect(after).toBeGreaterThan(before);
+    source.dispose();
+  });
+
+  it("closed-loop manual drainage gradually lowers water level in manual mode", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
+    await source.updateSettings("pond-001", { mode: "manual" });
+    const before = source.getDatabaseSnapshot().ponds["pond-001"].sensors.waterLevel;
+
+    await source.createCommand("pond-001", { device: "drainagePump", action: "on", createdAtMs: nowMs });
+    nowMs += 350;
+    await vi.advanceTimersByTimeAsync(350);
+    nowMs += 3_000;
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    const after = source.getDatabaseSnapshot().ponds["pond-001"].sensors.waterLevel;
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.drainagePump).toBe(true);
+    expect(after).toBeLessThan(before);
+    source.dispose();
+  });
+
+  it("closed-loop manual dilution gradually lowers salinity and matching EC in manual mode", async () => {
+    vi.useFakeTimers();
+    let nowMs = MOCK_NOW_MS;
+    const source = new MockPondDataSource(TEST_FARMER_ACCESS, undefined, () => nowMs);
+    await source.updateSettings("pond-001", { mode: "manual" });
+    const before = source.getDatabaseSnapshot().ponds["pond-001"].sensors;
+
+    await source.createCommand("pond-001", { device: "dilutionPump", action: "on", createdAtMs: nowMs });
+    nowMs += 350;
+    await vi.advanceTimersByTimeAsync(350);
+    nowMs += 4_000;
+    await vi.advanceTimersByTimeAsync(4_000);
+
+    const after = source.getDatabaseSnapshot().ponds["pond-001"].sensors;
+    expect(source.getDatabaseSnapshot().ponds["pond-001"].devices.dilutionPump).toBe(true);
+    expect(after.salinity).toBeLessThan(before.salinity);
+    expect(after.ec).toBeLessThan(before.ec);
     source.dispose();
   });
 });

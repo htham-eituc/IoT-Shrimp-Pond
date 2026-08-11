@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useCallback, useState, type ReactNode } from "react";
+import { Component, lazy, Suspense, useCallback, useMemo, useState, type ReactNode } from "react";
 import { Box } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { CommandDevice, PondState } from "../../domain";
@@ -8,7 +8,8 @@ import { PondVisualization } from "../PondVisualization";
 import { createPond3DDescription, detectWebGLSupport } from "./pondAccessibility";
 import { ProbeInspector } from "./ProbeInspector";
 import { SceneInteractionLayer } from "./SceneInteractionLayer";
-import type { PondProbeReading } from "./pondSceneModel";
+import { createPondAnchorWorldPoints } from "./pondAnchors";
+import { createPondSceneModel, type PondProbeReading } from "./pondSceneModel";
 
 const PondSceneCanvas = lazy(() => import("./PondSceneCanvas"));
 
@@ -32,6 +33,8 @@ export function Pond3DVisualization({
   const handleFailure = useCallback(() => setSceneFailed(true), []);
   const description = createPond3DDescription(pond, t, formatters.percentage);
   const fallback = <PondFallback pond={pond} failed={sceneFailed || !webGLSupported} />;
+  const sceneModel = useMemo(() => createPondSceneModel(pond), [pond]);
+  const anchors = useMemo(() => createPondAnchorWorldPoints(sceneModel), [sceneModel]);
 
   if (sceneFailed || !webGLSupported) return fallback;
 
@@ -43,8 +46,8 @@ export function Pond3DVisualization({
           <PondSceneCanvas pond={pond} probes={probes} onFailure={handleFailure} />
         </Suspense>
       </SceneErrorBoundary>
-      <ProbeInspector probes={probes} onActivate={(probe) => onSelectSensor(probe.key)} />
-      <SceneInteractionLayer onSelectSensor={onSelectSensor} onSelectDevice={onSelectDevice} onShowAlerts={onShowAlerts} />
+      <ProbeInspector probes={probes} anchors={anchors} onActivate={(probe) => onSelectSensor(probe.key)} />
+      <SceneInteractionLayer anchors={anchors} onSelectSensor={onSelectSensor} onSelectDevice={onSelectDevice} onShowAlerts={onShowAlerts} />
       <figcaption className="pond-3d__description" id="pond-3d-description">{description}</figcaption>
     </figure>
   );

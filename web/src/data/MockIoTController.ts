@@ -8,6 +8,7 @@ import type {
   PondState,
   TelemetryRecord,
 } from "../domain";
+import { SIMULATION_CONFIG } from "./simulationConfig";
 
 export type DemoScenario = "normal" | "hypoxia" | "rain_overflow" | "heat_salinity";
 
@@ -22,18 +23,30 @@ interface MockIoTControllerOptions {
   telemetryIntervalMs?: number;
 }
 
+interface EnvironmentState {
+  ph: number;
+  do: number;
+  temperature: number;
+  waterLevel: number;
+  salinity: number;
+  rainElapsedSec: number;
+  scenarioElapsedSec: number;
+  lastStepAtMs: number | null;
+}
+
 export class MockIoTController {
   private readonly commandDelayMs: number;
   private readonly scenarioStepMs: number;
   private readonly telemetryIntervalMs: number;
   private scenarioTimer: ReturnType<typeof setTimeout> | null = null;
+  private scenarioPondId: string | null = null;
   private activeScenario: DemoScenario = "normal";
-  private scenarioStep = 0;
   private rainIntensityMmPerHour = 0;
   private alertSequence = 1;
   private eventSequence = 1;
-  private lastTelemetryAtMs = new Map<string, number>();
+  private readonly lastTelemetryAtMs = new Map<string, number>();
   private readonly commandTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly environments = new Map<string, EnvironmentState>();
 
   constructor(
     private readonly database: PondDatabaseRoot,
@@ -49,10 +62,19 @@ export class MockIoTController {
 
   setScenario(pondId: string, scenario: DemoScenario): void {
     this.activeScenario = scenario;
-    this.scenarioStep = 0;
+    this.scenarioPondId = pondId;
+    const environment = this.environmentFor(pondId);
+    environment.scenarioElapsedSec = 0;
+    environment.rainElapsedSec = 0;
+    environment.lastStepAtMs = this.now();
+    this.applyScenarioInitialConditions(environment, scenario);
     this.clearScenarioTimer();
-    this.applyScenarioStep(pondId);
+    this.applySimulationStep(pondId);
     this.scheduleScenarioStep(pondId);
+  }
+
+  stopDemoScenario(): void {
+    this.stopScenario();
   }
 
   stopScenario(): void {
@@ -86,183 +108,205 @@ export class MockIoTController {
     this.commandTimers.clear();
   }
 
-  private applyScenarioStep(pondId: string): void {
+  private applySimulationStep(pondId: string): void {
     const pond = this.database.ponds[pondId];
     if (!pond) return;
 
+    const environment = this.environmentFor(pondId);
+    const timestampMs = this.now();
     const previousDevices = { ...pond.devices };
+    const deltaSec = this.consumeDeltaSec(environment, timestampMs);
     const automaticMode = this.database.settings[pondId]?.mode !== "manual";
 
-    if (this.activeScenario === "normal") {
-      this.applyNormal(pondId, pond);
+    if (automaticMode) {
+      this.applyAutomation(pondId, pond, environment);
     }
 
-    if (this.activeScenario === "hypoxia") {
-      this.applyHypoxia(pondId, pond);
-    }
+    this.evolveEnvironment(environment, pond.devices, deltaSec);
+    this.publishEnvironmentToPond(pond, environment);
 
-    if (this.activeScenario === "rain_overflow") {
-      this.applyRainOverflow(pondId, pond);
-    }
-
-    if (this.activeScenario === "heat_salinity") {
-      this.applyHeatSalinity(pondId, pond);
-    }
-
-    if (!automaticMode) {
-      pond.devices = previousDevices;
+    if (automaticMode) {
+      this.applyAutomation(pondId, pond, environment);
     }
 
     pond.connected = true;
-    pond.lastSeenMs = this.now();
+    pond.lastSeenMs = timestampMs;
     this.appendDeviceEventsForChanges(pondId, previousDevices, pond.devices, this.activeScenario);
     this.maybeAppendTelemetry(pondId, pond.sensors);
-    this.scenarioStep += 1;
     this.notify();
   }
 
-  private applyNormal(pondId: string, pond: PondState): void {
-    const phase = this.scenarioStep % 4;
-    pond.sensors = {
-      ph: round(7.78 + phase * 0.02, 2),
-      do: round(5.8 + phase * 0.1, 2),
-      temperature: round(29.4 + phase * 0.25, 2),
-      waterLevel: 68 + phase,
-      rain: false,
-      ec: round(18.2 + phase * 0.12, 2),
-      salinity: round(19.2 + phase * 0.35, 2),
-    };
-    pond.status = "normal";
-    pond.devices = {
-      aerator: false,
-      drainagePump: false,
-      dilutionPump: false,
-      feeder: true,
-      buzzer: false,
-      warningBeacon: false,
-    };
-    this.rainIntensityMmPerHour = 0;
-    this.resolveActiveAlerts(pondId, "normal_recovery");
-  }
+  private evolveEnvironment(environment: EnvironmentState, devices: PondDevices, deltaSec: number): void {
+    const config = SIMULATION_CONFIG;
+    const forces = config.scenarioForces[this.activeScenario];
+    const rainActive = this.isRaining(environment);
+    environment.scenarioElapsedSec += deltaSec;
+    if (rainActive) environment.rainElapsedSec += deltaSec;
 
-  private applyHypoxia(pondId: string, pond: PondState): void {
-    if (this.scenarioStep === 0) {
-      pond.sensors = {
-        ...pond.sensors,
-        do: 4.2,
-        rain: false,
-      };
-      pond.status = "warning";
-      this.appendEvent(pondId, {
-        type: "workflow_started",
-        source: "automatic",
-        reason: "hypoxia_watch",
-        createdAtMs: this.now(),
-      });
-      return;
+    const oxygenDemand = forces.oxygenDemandPerSec + (devices.feeder ? config.actuatorEffects.feederOxygenDemandPerSec : 0);
+    const aeration = devices.aerator ? config.actuatorEffects.aeratorOxygenPerSec : 0;
+    const normalDrift = config.recovery.normalDriftPerSec;
+
+    environment.do += (aeration - oxygenDemand) * deltaSec;
+    environment.do += (config.normal.do - environment.do) * normalDrift * deltaSec;
+    environment.ph += (config.normal.ph - environment.ph) * normalDrift * deltaSec;
+    environment.temperature += forces.temperatureTrendPerSec * deltaSec;
+    environment.temperature += (config.normal.temperature - environment.temperature) * (normalDrift * 0.35) * deltaSec;
+    environment.waterLevel += (config.normal.waterLevel - environment.waterLevel) * (normalDrift * 0.18) * deltaSec;
+    environment.salinity += (config.normal.salinity - environment.salinity) * (normalDrift * 0.18) * deltaSec;
+
+    if (rainActive) {
+      environment.waterLevel += forces.rainWaterRisePerSec * deltaSec;
+      environment.ph -= forces.rainPhDropPerSec * deltaSec;
+      environment.salinity -= forces.rainSalinityDropPerSec * deltaSec;
     }
 
-    pond.sensors = {
-      ...pond.sensors,
-      ph: 7.55,
-      do: 3.6,
-      temperature: 27.8,
-      waterLevel: 70,
-      rain: false,
-      ec: 18.8,
-      salinity: 20,
-    };
-    pond.status = "critical";
-    pond.devices = {
-      ...pond.devices,
-      aerator: true,
-      feeder: false,
-      buzzer: true,
-      warningBeacon: true,
-    };
-    this.rainIntensityMmPerHour = 0;
-    this.ensureAlert(pondId, "hypoxia", {
-      type: "hypoxia",
-      severity: "critical",
-      status: "active",
-      message: "DO remained below 4.0 mg/L during the hypoxia scenario.",
-      measurements: {
-        do: pond.sensors.do,
-      },
-      createdAtMs: this.now(),
-      resolvedAtMs: null,
-    });
+    environment.waterLevel -= forces.heatWaterLossPerSec * deltaSec;
+    environment.salinity += forces.heatSalinityRisePerSec * deltaSec;
+
+    if (devices.drainagePump) {
+      environment.waterLevel -= config.actuatorEffects.drainageWaterDropPerSec * deltaSec;
+    }
+
+    if (devices.dilutionPump) {
+      environment.waterLevel += config.actuatorEffects.dilutionWaterRisePerSec * deltaSec;
+      environment.salinity -= config.actuatorEffects.dilutionSalinityDropPerSec * deltaSec;
+      environment.temperature -= config.actuatorEffects.dilutionTemperatureCoolingPerSec * deltaSec;
+    }
+
+    if (devices.aerator) {
+      environment.ph += config.actuatorEffects.aeratorPhMixingPerSec * deltaSec;
+    }
+
+    this.clampEnvironment(environment);
+    this.rainIntensityMmPerHour = rainActive ? 28 : 0;
   }
 
-  private applyRainOverflow(pondId: string, pond: PondState): void {
-    const waterLevel = Math.min(96, 92 + this.scenarioStep * 2);
-    pond.sensors = {
-      ...pond.sensors,
-      ph: Math.max(7.1, 7.4 - this.scenarioStep * 0.08),
-      do: 5.6,
-      temperature: 26.8,
-      waterLevel,
-      rain: true,
-      ec: 16.8,
-      salinity: 17.5,
-    };
-    pond.status = waterLevel > 90 ? "critical" : "warning";
-    pond.devices = {
-      ...pond.devices,
-      aerator: true,
-      drainagePump: waterLevel > 90,
-    };
-    this.rainIntensityMmPerHour = 28;
-    this.ensureAlert(pondId, "rain_overflow", {
-      type: "rain_overflow",
-      severity: "critical",
-      status: "active",
-      message: "Water level exceeded 90% during rainfall.",
-      measurements: {
-        rain: true,
-        waterLevel: pond.sensors.waterLevel,
-        ph: pond.sensors.ph,
-      },
-      createdAtMs: this.now(),
-      resolvedAtMs: null,
-    });
+  private applyAutomation(pondId: string, pond: PondState, environment: EnvironmentState): void {
+    const settings = this.database.settings[pondId];
+    const thresholds = settings?.thresholds;
+    if (!settings || !thresholds) return;
+
+    const hypoxiaActive = environment.do < thresholds.do.hypoxia;
+    const hypoxiaRecovered = environment.do >= thresholds.do.recovery;
+    const rainOverflowActive = this.isRaining(environment) && environment.waterLevel > thresholds.waterLevel.warningHigh;
+    const rainOverflowRecovered = environment.waterLevel <= thresholds.waterLevel.normalMax;
+    const heatSalinityActive = environment.temperature > thresholds.temperature.warningHigh && environment.salinity > thresholds.salinity.warningHigh;
+    const heatSalinityRecovered = environment.salinity <= thresholds.salinity.normalMax || environment.temperature <= thresholds.temperature.normalMax;
+
+    if (settings.automation.hypoxiaResponseEnabled && hypoxiaActive) {
+      pond.devices.aerator = true;
+      pond.devices.feeder = false;
+      pond.devices.buzzer = true;
+      pond.devices.warningBeacon = true;
+      this.ensureAlert(pondId, "hypoxia", {
+        type: "hypoxia",
+        severity: "critical",
+        status: "active",
+        message: "DO is below the configured hypoxia threshold; aeration response is active.",
+        measurements: { do: round(environment.do, 2) },
+        createdAtMs: this.now(),
+        resolvedAtMs: null,
+      });
+    } else if (hypoxiaRecovered) {
+      this.resolveActiveAlert(pondId, "hypoxia", "hypoxia_recovered");
+    }
+
+    if (settings.automation.rainOverflowResponseEnabled && rainOverflowActive) {
+      pond.devices.drainagePump = true;
+      pond.devices.aerator = true;
+      this.ensureAlert(pondId, "rain_overflow", {
+        type: "rain_overflow",
+        severity: "critical",
+        status: "active",
+        message: "Rainfall is raising the pond above the overflow threshold; drainage response is active.",
+        measurements: { rain: true, waterLevel: round(environment.waterLevel, 1), ph: round(environment.ph, 2) },
+        createdAtMs: this.now(),
+        resolvedAtMs: null,
+      });
+    } else if (rainOverflowRecovered) {
+      pond.devices.drainagePump = false;
+      this.resolveActiveAlert(pondId, "rain_overflow", "rain_overflow_recovered");
+    }
+
+    if (settings.automation.heatSalinityResponseEnabled && heatSalinityActive) {
+      pond.devices.dilutionPump = true;
+      pond.devices.feeder = false;
+      this.ensureAlert(pondId, "heat_salinity", {
+        type: "heat_salinity",
+        severity: "warning",
+        status: "active",
+        message: "Temperature and salinity are above configured limits; dilution response is active.",
+        measurements: { temperature: round(environment.temperature, 2), salinity: round(environment.salinity, 2) },
+        createdAtMs: this.now(),
+        resolvedAtMs: null,
+      });
+    } else if (heatSalinityRecovered) {
+      pond.devices.dilutionPump = false;
+      this.resolveActiveAlert(pondId, "heat_salinity", "heat_salinity_recovered");
+    }
+
+    if (hypoxiaRecovered && rainOverflowRecovered && heatSalinityRecovered && this.activeScenario === "normal") {
+      pond.devices = {
+        aerator: false,
+        drainagePump: false,
+        dilutionPump: false,
+        feeder: true,
+        buzzer: false,
+        warningBeacon: false,
+      };
+      this.resolveAllActiveAlerts(pondId, "normal_recovery");
+    } else {
+      if (hypoxiaRecovered && !heatSalinityActive) {
+        pond.devices.buzzer = false;
+        pond.devices.warningBeacon = false;
+      }
+      if (!hypoxiaActive && !heatSalinityActive) {
+        pond.devices.feeder = true;
+      }
+    }
   }
 
-  private applyHeatSalinity(pondId: string, pond: PondState): void {
+  private publishEnvironmentToPond(pond: PondState, environment: EnvironmentState): void {
+    const hypoxiaActive = environment.do < 4;
+    const rainOverflowActive = this.isRaining(environment) && environment.waterLevel > 90;
+    const heatSalinityActive = environment.temperature > 33 && environment.salinity > 30;
+    const warningActive = environment.do < 5
+      || environment.waterLevel > 80
+      || environment.temperature > 32
+      || environment.salinity > 25
+      || environment.ph < 7.5
+      || environment.ph > 8.5;
+
     pond.sensors = {
-      ...pond.sensors,
-      ph: 7.65,
-      do: 5.1,
-      temperature: 34.2,
-      waterLevel: 72,
-      rain: false,
-      ec: 27.5,
-      salinity: 31.2,
+      ph: round(environment.ph, 2),
+      do: round(environment.do, 2),
+      temperature: round(environment.temperature, 2),
+      waterLevel: round(environment.waterLevel, 1),
+      rain: this.isRaining(environment),
+      ec: round(environment.salinity * SIMULATION_CONFIG.telemetry.salinityToEcMultiplier + SIMULATION_CONFIG.telemetry.salinityToEcOffset, 2),
+      salinity: round(environment.salinity, 2),
     };
-    pond.status = "warning";
-    pond.devices = {
-      ...pond.devices,
-      dilutionPump: true,
-      feeder: false,
-    };
-    this.rainIntensityMmPerHour = 0;
-    this.ensureAlert(pondId, "heat_salinity", {
-      type: "heat_salinity",
-      severity: "warning",
-      status: "active",
-      message: "Temperature and salinity exceeded configured limits.",
-      measurements: {
-        temperature: pond.sensors.temperature,
-        salinity: pond.sensors.salinity,
-      },
-      createdAtMs: this.now(),
-      resolvedAtMs: null,
-    });
+    pond.status = hypoxiaActive || rainOverflowActive ? "critical" : heatSalinityActive || warningActive ? "warning" : "normal";
+  }
+
+  private applyScenarioInitialConditions(environment: EnvironmentState, scenario: DemoScenario): void {
+    if (scenario === "normal") return;
+    const initial = SIMULATION_CONFIG.initialConditions[scenario];
+    environment.ph = initial.ph;
+    environment.do = initial.do;
+    environment.temperature = initial.temperature;
+    environment.waterLevel = initial.waterLevel;
+    environment.salinity = initial.salinity;
+  }
+
+  private isRaining(environment: EnvironmentState): boolean {
+    return this.activeScenario === "rain_overflow" && environment.rainElapsedSec < SIMULATION_CONFIG.recovery.rainStopAfterSec;
   }
 
   private scheduleScenarioStep(pondId: string): void {
     this.scenarioTimer = setTimeout(() => {
-      this.applyScenarioStep(pondId);
+      this.applySimulationStep(pondId);
       this.scheduleScenarioStep(pondId);
     }, this.scenarioStepMs);
   }
@@ -290,7 +334,15 @@ export class MockIoTController {
       reason: `manual_command:${commandId}`,
       createdAtMs: this.now(),
     });
+    this.ensureScenarioRunning(pondId);
     this.notify();
+  }
+
+  private ensureScenarioRunning(pondId: string): void {
+    if (this.scenarioTimer !== null && this.scenarioPondId === pondId) return;
+    this.scenarioPondId = pondId;
+    this.environmentFor(pondId).lastStepAtMs = this.now();
+    this.scheduleScenarioStep(pondId);
   }
 
   private ensureAlert(pondId: string, alertType: PondAlert["type"], alert: PondAlert): void {
@@ -318,7 +370,29 @@ export class MockIoTController {
     });
   }
 
-  private resolveActiveAlerts(pondId: string, reason: string): void {
+  private resolveActiveAlert(pondId: string, alertType: PondAlert["type"], reason: string): void {
+    const alerts = this.database.alerts[pondId] ?? {};
+    let resolvedAny = false;
+
+    for (const alert of Object.values(alerts)) {
+      if (alert.type === alertType && alert.status === "active") {
+        alert.status = "resolved";
+        alert.resolvedAtMs = this.now();
+        resolvedAny = true;
+      }
+    }
+
+    if (resolvedAny) {
+      this.appendEvent(pondId, {
+        type: "workflow_resolved",
+        source: "automatic",
+        reason,
+        createdAtMs: this.now(),
+      });
+    }
+  }
+
+  private resolveAllActiveAlerts(pondId: string, reason: string): void {
     const alerts = this.database.alerts[pondId] ?? {};
     let resolvedAny = false;
 
@@ -386,12 +460,52 @@ export class MockIoTController {
     this.lastTelemetryAtMs.set(pondId, timestampMs);
   }
 
+  private environmentFor(pondId: string): EnvironmentState {
+    const existing = this.environments.get(pondId);
+    if (existing) return existing;
+    const pond = this.database.ponds[pondId];
+    const environment: EnvironmentState = {
+      ph: pond?.sensors.ph ?? SIMULATION_CONFIG.normal.ph,
+      do: pond?.sensors.do ?? SIMULATION_CONFIG.normal.do,
+      temperature: pond?.sensors.temperature ?? SIMULATION_CONFIG.normal.temperature,
+      waterLevel: pond?.sensors.waterLevel ?? SIMULATION_CONFIG.normal.waterLevel,
+      salinity: pond?.sensors.salinity ?? SIMULATION_CONFIG.normal.salinity,
+      rainElapsedSec: 0,
+      scenarioElapsedSec: 0,
+      lastStepAtMs: null,
+    };
+    this.environments.set(pondId, environment);
+    return environment;
+  }
+
+  private consumeDeltaSec(environment: EnvironmentState, timestampMs: number): number {
+    const previous = environment.lastStepAtMs ?? timestampMs - this.scenarioStepMs;
+    environment.lastStepAtMs = timestampMs;
+    return clamp(
+      (timestampMs - previous) / 1_000,
+      SIMULATION_CONFIG.step.minimumDeltaSec,
+      SIMULATION_CONFIG.step.maximumDeltaSec,
+    );
+  }
+
+  private clampEnvironment(environment: EnvironmentState): void {
+    environment.ph = clamp(environment.ph, SIMULATION_CONFIG.sensors.ph.min, SIMULATION_CONFIG.sensors.ph.max);
+    environment.do = clamp(environment.do, SIMULATION_CONFIG.sensors.do.min, SIMULATION_CONFIG.sensors.do.max);
+    environment.temperature = clamp(environment.temperature, SIMULATION_CONFIG.sensors.temperature.min, SIMULATION_CONFIG.sensors.temperature.max);
+    environment.waterLevel = clamp(environment.waterLevel, SIMULATION_CONFIG.sensors.waterLevel.min, SIMULATION_CONFIG.sensors.waterLevel.max);
+    environment.salinity = clamp(environment.salinity, SIMULATION_CONFIG.sensors.salinity.min, SIMULATION_CONFIG.sensors.salinity.max);
+  }
+
   private initializeTelemetryClock(): void {
     for (const [pondId, records] of Object.entries(this.database.telemetry)) {
       const latest = Math.max(0, ...Object.values(records).map((record) => record.timestampMs));
       this.lastTelemetryAtMs.set(pondId, latest);
     }
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 function round(value: number, decimals: number): number {

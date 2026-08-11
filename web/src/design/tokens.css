@@ -28,6 +28,28 @@
   --font-display: "Space Grotesk", "Segoe UI", sans-serif;
   --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "Cascadia Mono", monospace;
+  --type-2xs: 9px;
+  --type-xs: 10px;
+  --type-sm: 12px;
+  --type-md: 14px;
+  --type-lg: 18px;
+  --type-display: clamp(28px, 3.2vw, 42px);
+  --type-h1: clamp(20px, 1.45vw, 24px);
+  --type-h2: clamp(16px, 1.05vw, 19px);
+  --type-h3: 15px;
+  --type-card-title: 12px;
+  --type-card-label: 11px;
+  --type-body: 14px;
+  --type-body-sm: 13px;
+  --type-caption: 11px;
+  --type-button: 12px;
+  --type-value: clamp(28px, 2.65vw, 36px);
+  --type-value-compact: clamp(20px, 1.45vw, 25px);
+  --type-value-support: 13px;
+  --sensor-mini-chart-height: 16px;
+  --line-tight: 1.12;
+  --line-body: 1.5;
+  --line-caption: 1.35;
 
   --radius-sm: 8px;
   --radius-md: 12px;

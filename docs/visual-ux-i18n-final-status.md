@@ -6,6 +6,130 @@ Phase 15 completed a QA and bounded optimization pass over the existing command 
 
 The automated browser matrix covered 40 desktop combinations (five viewports × four scenarios × two locales), six tablet/mobile combinations, and twelve localized drawer/dialog workflow cases. The final run reported no layout, horizontal-overflow, clipping, untranslated-key, mixed-language, or scenario-projection failures.
 
+## Phase 35 realtime, simulation, sensor UI, and circle QA addendum
+
+Phase 35 rechecked the dashboard after the realtime stale-data, closed-loop mock simulation, shared sparkline layout, and true-circle fixes from Phases 31–34. No product features were added and no Firebase, IoT, command, or `PondDataSource` protocol fields were changed.
+
+### Stale-data root cause and lifecycle fix
+
+The stale-value risk was old asynchronous work continuing to resolve after the dashboard had switched data source or pond scope. That could leave previous pond snapshots or telemetry visible while newer subscriptions were already active.
+
+The current dashboard state is scoped by both `dataSource` and `pondId`. Subscription callbacks and telemetry refreshes commit only when their scope is still current, cleanup unsubscribes every realtime listener on unmount/scope change, and complete `PondState` snapshots replace prior sensor/device objects instead of merging nested values. Regression tests cover:
+
+- stale updates from an old data source being ignored;
+- stale updates from an old pond id being ignored;
+- fresh authorized mock sessions starting from a new pond snapshot rather than previous user-local state;
+- duplicate mock pond listeners not surviving unsubscribe/remount.
+
+### Live freshness QA
+
+Freshness remains a presentation projection of `connected` and `lastSeenMs`:
+
+| Input state | Result |
+| --- | --- |
+| `connected=true` and heartbeat within the stale window | Live / `Đang cập nhật` |
+| `connected=true` and heartbeat older than the stale window | Data delayed / `Dữ liệu chậm` |
+| `connected=false` | Offline / `Mất kết nối` |
+
+Automated tests verify the stale threshold boundary and the localized wording. Device connectivity is still separate from pond severity and does not rewrite `pond.status`.
+
+### Closed-loop simulation model
+
+The mock IoT controller now owns dynamic environmental evolution behind `MockPondDataSource`. Scenario names stay inside the mock/demo controller and are not part of the Firebase protocol.
+
+| Scenario/control | Verified relationship |
+| --- | --- |
+| Normal | Sensor values drift toward stable configured-normal conditions. |
+| Hypoxia | DO decreases, automatic aeration starts, feeder stops, buzzer/beacon activate, DO recovers under aeration, and hypoxia alerts resolve after normal recovery. |
+| Rain overflow | Boolean `rain` becomes true, water rises above overflow level, drainage/aeration activate, water level later decreases, and the pump stops on recovery. |
+| Heat + salinity | Temperature/salinity rise, dilution activates, feeder stops, salinity and EC decrease under dilution, and the heat/salinity workflow resolves on recovery. |
+| Manual aerator ON | Command remains pending until device feedback, then `devices.aerator` turns on and DO improves over subsequent simulation steps. |
+| Manual drainage ON | Command completion updates `devices.drainagePump`, then water level decreases over subsequent simulation steps. |
+| Manual dilution ON | Command completion updates `devices.dilutionPump`, then salinity and EC decrease over subsequent simulation steps. |
+
+Telemetry remains Firebase-shaped at `/telemetry/{pondId}/{timestampMs}` with `timestampMs`, `ph`, `do`, `temperature`, `waterLevel`, `rain`, `ec`, and `salinity`. The mock keeps visual rain intensity internal and never writes a rainfall-rate field into pond sensors or telemetry.
+
+### Sensor mini-chart and circle geometry QA
+
+All six primary compact cards now share the same layout contract: header, body, and footer trend slot. The combined Conductivity / Salinity card uses salinity as the primary compact trend and keeps EC visible as a secondary measured value; History still exposes EC and salinity as independent series.
+
+True-circle controls were fixed at the design-system level. Circle-like controls now use equal inline/block size, matching min-size, `aspect-ratio: 1 / 1`, zero padding, `flex: 0 0 auto`, and `border-radius: 50%`. The responsive layer increases the shared circle size rather than only increasing height.
+
+Browser measurement during the Phase 34 pass confirmed VI, EN, DO, pH, T°, and representative 3D hotspots at `1920×1080`, `1366×768`, `1024×768`, and `390×844` rendered with equal width and height. Phase 35 retained that CSS without further geometry changes.
+
+### 3D state synchronization QA
+
+Static scan and tests confirm `Pond3D` renders from `PondState`/presentation models, not mock scenario names. Scenario strings appear only in demo-shell controls and tests. The 3D projection maps:
+
+- `sensors.waterLevel` to interpolated visual water height;
+- `sensors.rain` to rain visuals;
+- `devices.aerator` to paddlewheel/bubble activity;
+- `devices.drainagePump` to outward flow;
+- `devices.dilutionPump` to inward flow;
+- `devices.feeder` to feeder state;
+- `devices.warningBeacon` and `devices.buzzer` to warning indicators;
+- `pond.status` to subtle scene severity cues.
+
+The scene model tests verify projection without mutating the source `PondState`, anchor positions for all interactive sensor/device targets, WebGL fallback selection, and all mock scenario outcomes through `PondDataSource` subscriptions.
+
+### Phase 35 verification status
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Stale data and subscription lifecycle | Pass | `usePondDashboard.test.ts`, `MockPondDataSource.test.ts`, `createPondDataSource.test.ts` |
+| Live/stale/offline freshness | Pass | `connection.test.ts` |
+| Closed-loop demo scenarios | Pass | `MockPondDataSource.test.ts` |
+| Manual actuator effect on sensors | Pass | `MockPondDataSource.test.ts` |
+| Shared sensor mini-chart layout | Pass | `conductivitySalinityCard.test.tsx` |
+| Circle geometry implementation | Pass | Phase 34 browser measurements plus retained design-system CSS |
+| Pond3D state-driven projection | Pass | `pondSceneModel.test.ts` and static scan of `web/src/components/Pond3D` |
+| i18n regression | Pass | Full test suite plus existing locale coverage |
+| Real Firebase account success flow | Not confirmed in this environment | Local dev reached Firebase Authentication, but the supplied account/config returned an Identity Toolkit 400 and the dashboard was not authorized. No credential was committed, documented, or stored by application code. |
+
+Because real Firebase authentication did not complete, the login → Firebase → authorized dashboard, refresh-after-real-login, logout-after-real-login, and User A → User B browser flows were not manually confirmed in this Phase 35 run. The corresponding lifecycle protections remain covered by unit tests and should be re-run with a known-valid farmer account and matching `/users/{uid}` metadata in Firebase Console.
+
+## Phase 30 final polish QA addendum
+
+Phase 30 rechecked the dashboard after the focused UI/responsive/typography/3D polish track from Phases 25–29. One small regression was fixed during this pass: at `1280×720`, the current pond name in the command-center header was still clipped by a narrow breakpoint override. The breakpoint now allows a wider pond identity block without reintroducing horizontal overflow or page-level desktop scrolling.
+
+Runtime QA used the real Firebase Authentication flow with a farmer account supplied for the test session, then exercised the dashboard with `VITE_DATA_MODE=mock`. No credential was committed, written to source files, documented, or stored by application code during the QA pass.
+
+### Reported issue verification
+
+| Reported issue | Phase 30 result |
+| --- | --- |
+| Conductivity / Salinity card sparkline position | Pass. The sparkline remains in `.metric-card__composite-trend`, appears after the value list, and stayed within the card bounds in every measured viewport and both locales. |
+| Responsive behavior | Pass with one fix. No unintended horizontal overflow was measured across the full viewport matrix. Desktop viewports fit without page-level vertical scroll; tablet/mobile scroll vertically as intended. |
+| Font sizes / readability | Pass. The typography scale and responsive overrides kept primary values, device labels, buttons, status chips, and helper text readable in VI and EN. No measured text clipping remained after the 1280×720 header fix. |
+| 3D hotspot alignment and visual upgrade | Pass. Browser QA measured all nine interactive 3D overlays/probes as projected, visible, and inside the pond figure at the constrained desktop viewport. Unit tests also cover shared camera projection across desktop/tablet shapes. |
+
+### Phase 30 viewport matrix
+
+The matrix below was measured in the authenticated dashboard with Playwright. Desktop viewports are expected to avoid page-level scroll; tablet and mobile intentionally allow vertical page scrolling for readability.
+
+| Viewport | VI | EN | Horizontal scroll | Page vertical scroll | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 1920×1080 | Pass | Pass | None | None | 3D area about 1169×649; six sensor cards and six device cards visible. |
+| 1600×900 | Pass | Pass | None | None | 3D area about 972×510; header and language control visible. |
+| 1440×900 | Pass | Pass | None | None | 3D area about 801×522; no clipping. |
+| 1366×768 | Pass | Pass | None | None | 3D area about 759×390; hotspot overlay count 9/9 ready. |
+| 1280×720 | Pass after fix | Pass after fix | None | None | Pond name clipping fixed; no desktop scrollbar introduced. |
+| 1024×768 | Pass | Pass | None | Expected vertical scroll | Tablet layout stacks content; 3D area about 987×495. |
+| 820×1180 | Pass | Pass | None | Expected vertical scroll | Two-column tablet cards; language and mode visible. |
+| 768×1024 | Pass | Pass | None | Expected vertical scroll | Tablet portrait layout remains readable. |
+| 430×932 | Pass | Pass | None | Expected vertical scroll | Mobile cards usable; composite sparkline remains inside card. |
+| 390×844 | Pass | Pass | None | Expected vertical scroll | Mobile one-column/tight layout; no text clipping. |
+| 375×812 | Pass | Pass | None | Expected vertical scroll | Mobile layout remains usable. |
+| 360×800 | Pass | Pass | None | Expected vertical scroll | Narrowest checked viewport; no horizontal overflow. |
+
+### Phase 30 3D and accessibility notes
+
+- The 3D scene now logs zero browser console errors in the checked session.
+- The Phase 29 shadow-map warning was removed by using the non-deprecated R3F `percentage` shadow tier. One remaining development-console warning comes from the current Three/R3F dependency path using deprecated `THREE.Clock`; this is not emitted by application code.
+- Reduced-motion emulation selected low 3D quality and set `data-reduced-motion="true"` on the 3D canvas wrapper; returning to normal motion restored `data-reduced-motion="false"` and balanced quality at the checked viewport.
+- Keyboard traversal at `1366×768` reached the language controls, user menu, History and Settings actions, scenario selector, probe buttons, and 3D hotspots with visible focus outlines.
+- Mock scenario switching at `1366×768` kept the dashboard free of horizontal overflow and page-level vertical scroll, and all projected 3D hotspots/probes remained inside the pond figure.
+
 ## One-screen desktop behavior
 
 The primary monitoring screen fits without body/page vertical scrolling at every tested desktop size. The header, language selector, operating mode, active-alert region, seven sensor values presented in six cards, six device states, and 3D pond remain visible together. Secondary charts, configuration, logs, and command details remain in a single contextual drawer.

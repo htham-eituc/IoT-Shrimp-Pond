@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusBadge } from "../StatusBadge";
+import type { PondAnchorKey, PondWorldPoint } from "./pondAnchors";
 import type { PondProbeKey, PondProbeReading } from "./pondSceneModel";
+import { usePondAnchorProjection } from "./usePondAnchorProjection";
 
 const SHORT_LABELS: Record<PondProbeKey, string> = {
   do: "DO",
@@ -9,18 +11,28 @@ const SHORT_LABELS: Record<PondProbeKey, string> = {
   temperature: "T°",
 };
 
-export function ProbeInspector({ probes, onActivate }: { probes: readonly PondProbeReading[]; onActivate(probe: PondProbeReading): void }) {
+export function ProbeInspector({
+  probes,
+  anchors,
+  onActivate,
+}: {
+  probes: readonly PondProbeReading[];
+  anchors: Partial<Record<PondAnchorKey, PondWorldPoint>>;
+  onActivate(probe: PondProbeReading): void;
+}) {
   const { t } = useTranslation("dashboard");
   const [hoveredProbe, setHoveredProbe] = useState<PondProbeKey | null>(null);
   const [selectedProbe, setSelectedProbe] = useState<PondProbeKey | null>(null);
   const activeKey = selectedProbe ?? hoveredProbe;
   const activeProbe = probes.find((probe) => probe.key === activeKey) ?? null;
+  const { layerRef, registerAnchor } = usePondAnchorProjection(anchors);
 
   return (
-    <div className="pond-3d-probes">
+    <div className="pond-3d-probes" ref={layerRef}>
       {!activeProbe && <span className="pond-3d-probes__hint">{t("pond3d.probeHint")}</span>}
       {probes.map((probe) => (
         <button
+          ref={registerAnchor(probe.key)}
           key={probe.key}
           type="button"
           className={`pond-3d-probe pond-3d-probe--${probe.key} pond-3d-probe--${probe.tone}`}

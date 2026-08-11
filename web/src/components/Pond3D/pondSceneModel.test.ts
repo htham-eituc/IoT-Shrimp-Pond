@@ -5,6 +5,7 @@ import { createMockPondDatabase, MockPondDataSource, MOCK_NOW_MS } from "../../d
 import { Pond3DVisualization } from "./Pond3DVisualization";
 import { detectWebGLSupport } from "./pondAccessibility";
 import { createPondSceneModel } from "./pondSceneModel";
+import { createPondAnchorWorldPoints, projectPondAnchor, type PondAnchorKey } from "./pondAnchors";
 import { TEST_FARMER_ACCESS } from "../../test/fixtures";
 
 afterEach(() => vi.useRealTimers());
@@ -39,6 +40,71 @@ describe("3D pond scene projection", () => {
     expect(model.waterLevel).toBe(100);
     expect(model.waterSurfaceY).toBe(0.34);
     expect(pond.sensors.waterLevel).toBe(125);
+  });
+
+  it("creates world anchors for all interactive 3D sensors and device targets", () => {
+    const pond = createMockPondDatabase().ponds["pond-001"];
+    pond.sensors.waterLevel = 74;
+    const model = createPondSceneModel(pond);
+    const anchors = createPondAnchorWorldPoints(model);
+    const requiredAnchors: PondAnchorKey[] = [
+      "do",
+      "ph",
+      "temperature",
+      "waterLevel",
+      "aerator",
+      "drainagePump",
+      "dilutionPump",
+      "feeder",
+      "warningBeacon",
+    ];
+
+    for (const key of requiredAnchors) {
+      expect(anchors[key].every(Number.isFinite)).toBe(true);
+    }
+    expect(anchors.do[1]).toBeCloseTo(model.waterSurfaceY + 0.85);
+    expect(anchors.ph[1]).toBeCloseTo(model.waterSurfaceY + 0.85);
+    expect(anchors.temperature[1]).toBeCloseTo(model.waterSurfaceY + 0.85);
+    expect(anchors.waterLevel[1]).toBeCloseTo(model.waterSurfaceY + 0.05);
+  });
+
+  it("projects anchors from shared camera settings for different viewport shapes", () => {
+    const pond = createMockPondDatabase().ponds["pond-001"];
+    const anchors = createPondAnchorWorldPoints(createPondSceneModel(pond));
+    const wide = projectPondAnchor(anchors.feeder, { width: 960, height: 540 });
+    const square = projectPondAnchor(anchors.feeder, { width: 540, height: 540 });
+
+    expect(wide.visible).toBe(true);
+    expect(square.visible).toBe(true);
+    expect(wide.left).not.toBeCloseTo(square.left);
+    expect(wide.top).toBeGreaterThanOrEqual(0);
+    expect(wide.top).toBeLessThanOrEqual(540);
+  });
+
+  it("keeps every interactive anchor inside common desktop and tablet projections", () => {
+    const pond = createMockPondDatabase().ponds["pond-001"];
+    pond.sensors.waterLevel = 88;
+    const anchors = createPondAnchorWorldPoints(createPondSceneModel(pond));
+    const viewports = [
+      { width: 1280, height: 720 },
+      { width: 1366, height: 768 },
+      { width: 1440, height: 900 },
+      { width: 1024, height: 768 },
+      { width: 768, height: 540 },
+    ];
+
+    for (const viewport of viewports) {
+      for (const [key, point] of Object.entries(anchors)) {
+        const projection = projectPondAnchor(point, viewport);
+
+        expect(`${key} ${viewport.width}x${viewport.height}`).toBeTruthy();
+        expect(projection.visible).toBe(true);
+        expect(projection.left).toBeGreaterThanOrEqual(0);
+        expect(projection.left).toBeLessThanOrEqual(viewport.width);
+        expect(projection.top).toBeGreaterThanOrEqual(0);
+        expect(projection.top).toBeLessThanOrEqual(viewport.height);
+      }
+    }
   });
 
   it("detects WebGL absence and context errors for fallback selection", () => {

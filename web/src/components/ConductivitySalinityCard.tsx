@@ -18,11 +18,14 @@ export function ConductivitySalinityCard({
       className={`metric-card metric-card--${metric.tone} metric-card--compact metric-card--composite${highlighted ? " metric-card--highlighted" : ""}`}
       tabIndex={0}
     >
-      <span className="metric-card__icon">
-        <Zap aria-hidden="true" />
-      </span>
-      <div className="metric-card__composite-copy">
+      <div className="metric-card__header">
+        <span className="metric-card__icon">
+          <Zap aria-hidden="true" />
+        </span>
         <h3>{metric.label}</h3>
+        <StatusBadge label={metric.state} tone={metric.tone} />
+      </div>
+      <div className="metric-card__body metric-card__composite-copy">
         <dl className="metric-card__dual-readings">
           <div className="metric-card__dual-row metric-card__dual-row--primary">
             <dt>{metric.salinityLabel}</dt>
@@ -31,7 +34,6 @@ export function ConductivitySalinityCard({
               {metric.salinity.unit && <span>{metric.salinity.unit}</span>}
               <span className="sr-only">, {metric.salinity.state}</span>
             </dd>
-            <Sparkline values={metric.trend} tone={metric.salinity.tone} />
           </div>
           <div className="metric-card__dual-row">
             <dt>{metric.conductivityLabel}</dt>
@@ -42,7 +44,9 @@ export function ConductivitySalinityCard({
           </div>
         </dl>
       </div>
-      <StatusBadge label={metric.state} tone={metric.tone} />
+      <div className="metric-card__trend">
+        <Sparkline values={metric.trend} tone={metric.salinity.tone} />
+      </div>
     </article>
   );
 }

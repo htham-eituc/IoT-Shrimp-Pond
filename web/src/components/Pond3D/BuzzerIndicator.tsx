@@ -11,9 +11,13 @@ export function BuzzerIndicator({ active, reducedMotion }: { active: boolean; re
   });
   return (
     <group position={[3.55, 0.47, 2.92]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.16, 0.21, 0.28, 10]} />
-        <meshStandardMaterial color={active ? "#e8a33d" : "#51666b"} emissive={active ? "#8c5114" : "#000000"} emissiveIntensity={active ? 0.55 : 0} />
+      <mesh position={[0, -0.22, 0]} castShadow>
+        <boxGeometry args={[0.4, 0.08, 0.3]} />
+        <meshStandardMaterial color="#3b5559" roughness={0.58} metalness={0.12} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.16, 0.21, 0.28, 14]} />
+        <meshStandardMaterial color={active ? "#e8a33d" : "#51666b"} emissive={active ? "#8c5114" : "#000000"} emissiveIntensity={active ? 0.55 : 0} roughness={0.46} metalness={0.1} />
       </mesh>
       {active && (
         <group ref={ringsRef} position={[0, 0.12, 0]} rotation={[Math.PI / 2, 0, 0]}>

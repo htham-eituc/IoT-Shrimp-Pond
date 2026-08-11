@@ -23,7 +23,7 @@ export const vi = {
       completed: "Hoàn tất",
       failed: "Thất bại",
     },
-    connection: { online: "Trực tuyến", stale: "Dữ liệu cũ", offline: "Ngoại tuyến" },
+    connection: { online: "Đang cập nhật", stale: "Dữ liệu chậm", offline: "Mất kết nối" },
     mode: { automatic: "Tự động", manual: "Thủ công" },
     action: { on: "BẬT", off: "TẮT" },
     boolean: { true: "Có", false: "Không" },

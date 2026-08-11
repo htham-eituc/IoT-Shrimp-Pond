@@ -1392,9 +1392,33 @@ button:disabled {
 
 .threshold-grid {
   display: grid;
+  grid-template-areas:
+    "do waterLevel"
+    "ph temperature"
+    "salinity .";
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   align-items: start;
+}
+
+.threshold-card[data-threshold-section="do"] {
+  grid-area: do;
+}
+
+.threshold-card[data-threshold-section="waterLevel"] {
+  grid-area: waterLevel;
+}
+
+.threshold-card[data-threshold-section="ph"] {
+  grid-area: ph;
+}
+
+.threshold-card[data-threshold-section="temperature"] {
+  grid-area: temperature;
+}
+
+.threshold-card[data-threshold-section="salinity"] {
+  grid-area: salinity;
 }
 
 .threshold-card,
@@ -2446,6 +2470,18 @@ button:disabled {
 
   .automation-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .threshold-grid {
+    grid-template-areas:
+      "do"
+      "waterLevel"
+      "ph"
+      "temperature"
+      "salinity";
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

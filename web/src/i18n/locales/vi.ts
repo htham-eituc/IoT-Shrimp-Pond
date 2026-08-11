@@ -241,11 +241,11 @@ export const vi = {
     invalidFields_other: "Hãy kiểm tra {{count}} trường không hợp lệ.",
     invalidDescription: "Thứ tự các ngưỡng và giới hạn vật lý phải hợp lệ trước khi lưu.",
     groups: {
-      ph: { label: "pH", description: "Các dải vận hành về độ axit và kiềm." },
       do: { label: "Oxy hòa tan", description: "Ngưỡng quy trình thiếu oxy và thời gian kích hoạt liên tục." },
+      waterLevel: { label: "Mực nước", description: "Dải bình thường/cảnh báo và thời gian duy trì điều kiện tràn." },
+      ph: { label: "pH", description: "Các dải vận hành về độ axit và kiềm." },
       temperature: { label: "Nhiệt độ", description: "Giới hạn nhiệt độ nước bình thường và cảnh báo." },
       salinity: { label: "Độ mặn ước tính", description: "Các dải độ mặn được bộ điều khiển đánh giá." },
-      waterLevel: { label: "Mực nước", description: "Dải bình thường/cảnh báo và thời gian duy trì điều kiện tràn." },
     },
     fields: {
       normalMin: "Bình thường tối thiểu",

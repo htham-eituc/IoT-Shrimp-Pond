@@ -154,7 +154,7 @@ export function SettingsView({ dataSource, pondId, settings, onDirtyChange }: Se
           {THRESHOLD_GROUPS.map((group) => {
             const groupValues = baseline.thresholds[group.key] as unknown as Record<string, number>;
             return (
-              <fieldset key={group.key} className="threshold-card">
+              <fieldset key={group.key} className="threshold-card" data-threshold-section={group.key}>
                 <legend>{t(`groups.${group.key}.label`, { ns: "settings" })}</legend>
                 <p>{t(`groups.${group.key}.description`, { ns: "settings" })}</p>
                 <div className="threshold-fields">

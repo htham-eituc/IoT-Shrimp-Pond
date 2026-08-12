@@ -12,9 +12,11 @@
 unsigned long lastUploadMs = 0;
 unsigned long lastCommandCheckMs = 0;
 unsigned long lastSettingsRefreshMs = 0;
+unsigned long lastSimulationRefreshMs = 0;
 
 String currentMode = "automatic";
 DeviceState currentDevices = {false, false, false, false, false, false};
+SimulationControl simulation = {false, "normal", "initial"};
 
 void setup() {
   Serial.begin(115200);
@@ -33,7 +35,18 @@ void loop() {
 
   if (lastSettingsRefreshMs == 0 || now - lastSettingsRefreshMs >= SETTINGS_REFRESH_INTERVAL_MS) {
     lastSettingsRefreshMs = now;
+    const String previousMode = currentMode;
     refreshMode(currentMode);
+    if (previousMode != "manual" && currentMode == "manual") {
+      stopSimulationOverride(simulation, "manual_mode");
+    }
+  }
+
+  if (currentMode == "automatic" && (lastSimulationRefreshMs == 0 || now - lastSimulationRefreshMs >= SIMULATION_REFRESH_INTERVAL_MS)) {
+    lastSimulationRefreshMs = now;
+    refreshSimulationControl(simulation);
+  } else if (currentMode == "manual") {
+    stopSimulationOverride(simulation, "manual_mode");
   }
 
   if (lastCommandCheckMs == 0 || now - lastCommandCheckMs >= COMMAND_CHECK_INTERVAL_MS) {
@@ -46,7 +59,7 @@ void loop() {
   }
   lastUploadMs = now;
 
-  SensorReadings sensors = readSensors();
+  SensorReadings sensors = readSensors(simulation);
   String status = statusFor(sensors);
 
   if (currentMode == "automatic") {

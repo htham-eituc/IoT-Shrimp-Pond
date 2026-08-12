@@ -26,3 +26,9 @@ struct PendingCommand {
   String device;
   String action;
 };
+
+struct SimulationControl {
+  bool enabled;
+  String scenario;
+  String requestId;
+};

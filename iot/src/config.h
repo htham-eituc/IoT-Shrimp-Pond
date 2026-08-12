@@ -18,3 +18,4 @@ constexpr int WARNING_LED_PIN = 22;
 constexpr unsigned long SENSOR_UPLOAD_INTERVAL_MS = 5000;
 constexpr unsigned long COMMAND_CHECK_INTERVAL_MS = 2000;
 constexpr unsigned long SETTINGS_REFRESH_INTERVAL_MS = 10000;
+constexpr unsigned long SIMULATION_REFRESH_INTERVAL_MS = 2000;

@@ -54,6 +54,56 @@ String telemetryPath(uint64_t timestampMs) {
   return "/telemetry/" + String(POND_ID) + "/" + timestampString(timestampMs);
 }
 
+namespace {
+
+String simulationControlPath() {
+  return "/simulation/" + String(POND_ID) + "/control";
+}
+
+String simulationStatePath() {
+  return "/simulation/" + String(POND_ID) + "/state";
+}
+
+bool getJsonString(FirebaseJson &json, const char *path, String &value) {
+  FirebaseJsonData data;
+  if (!json.get(data, path) || !data.success) return false;
+  value = data.to<String>();
+  return true;
+}
+
+bool getJsonBool(FirebaseJson &json, const char *path, bool &value) {
+  FirebaseJsonData data;
+  if (!json.get(data, path) || !data.success) return false;
+  value = data.to<bool>();
+  return true;
+}
+
+String normalizeSimulationScenario(const String &scenario) {
+  return scenario == "rain" ? "rain_overflow" : scenario;
+}
+
+bool isSimulationScenario(const String &scenario) {
+  const String normalized = normalizeSimulationScenario(scenario);
+  return normalized == "normal" || normalized == "rain_overflow" || normalized == "hypoxia" || normalized == "heat_salinity";
+}
+
+void writeSimulationState(const SimulationControl &control) {
+  const uint64_t timestampMs = currentTimestampMs();
+  FirebaseJson state;
+  state.set("active", control.enabled);
+  state.set("scenario", control.enabled ? normalizeSimulationScenario(control.scenario) : "normal");
+  state.set("requestId", control.requestId);
+  state.set("startedAtMs", static_cast<double>(timestampMs));
+  state.set("updatedAtMs", static_cast<double>(timestampMs));
+
+  const String path = simulationStatePath();
+  if (!Firebase.RTDB.setJSON(&fbdo, path, &state)) {
+    Serial.printf("Write failed: %s -> %s\n", path.c_str(), fbdo.errorReason().c_str());
+  }
+}
+
+}
+
 uint64_t currentTimestampMs() {
   const time_t nowSeconds = time(nullptr);
 
@@ -90,4 +140,44 @@ void setupFirebase() {
   Firebase.reconnectWiFi(true);
 
   Serial.println("Signing in to Firebase as device account...");
+}
+
+bool refreshSimulationControl(SimulationControl &control) {
+  const String path = simulationControlPath();
+  if (!Firebase.RTDB.getJSON(&fbdo, path)) {
+    Serial.printf("Read failed: %s -> %s\n", path.c_str(), fbdo.errorReason().c_str());
+    return false;
+  }
+
+  FirebaseJson *json = fbdo.jsonObjectPtr();
+  SimulationControl next;
+  if (!getJsonBool(*json, "enabled", next.enabled) ||
+      !getJsonString(*json, "scenario", next.scenario) ||
+      !getJsonString(*json, "requestId", next.requestId) ||
+      !isSimulationScenario(next.scenario)) {
+    Serial.println("Ignoring invalid simulation control payload.");
+    return false;
+  }
+
+  if (!next.enabled) next.scenario = "normal";
+  next.scenario = normalizeSimulationScenario(next.scenario);
+
+  const bool changed = next.enabled != control.enabled ||
+                       next.scenario != control.scenario ||
+                       next.requestId != control.requestId;
+  control = next;
+  if (changed) {
+    writeSimulationState(control);
+    Serial.printf("Simulation %s: %s\n", control.enabled ? "started" : "stopped", control.scenario.c_str());
+  }
+  return true;
+}
+
+void stopSimulationOverride(SimulationControl &control, const char *reason) {
+  if (!control.enabled && control.scenario == "normal") return;
+
+  control.enabled = false;
+  control.scenario = "normal";
+  writeSimulationState(control);
+  Serial.printf("Simulation stopped: %s\n", reason);
 }

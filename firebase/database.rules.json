@@ -204,7 +204,7 @@
           },
 
           "scenario": {
-            ".validate": "newData.val() === 'normal' || newData.val() === 'rain' || newData.val() === 'hypoxia' || newData.val() === 'heat_salinity'"
+            ".validate": "newData.val() === 'normal' || newData.val() === 'rain_overflow' || newData.val() === 'hypoxia' || newData.val() === 'heat_salinity'"
           },
 
           "requestId": {
@@ -230,7 +230,7 @@
           },
 
           "scenario": {
-            ".validate": "newData.val() === 'normal' || newData.val() === 'rain' || newData.val() === 'hypoxia' || newData.val() === 'heat_salinity'"
+            ".validate": "newData.val() === 'normal' || newData.val() === 'rain_overflow' || newData.val() === 'hypoxia' || newData.val() === 'heat_salinity'"
           },
 
           "requestId": {

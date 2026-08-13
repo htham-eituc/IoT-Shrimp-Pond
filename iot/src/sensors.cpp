@@ -21,8 +21,7 @@ SensorReadings readSensors(const SimulationControl &simulation) {
   sensors.waterLevel = static_cast<int>(roundf(mapAdcToFloat(WATER_LEVEL_PIN, 0.0f, 100.0f)));
   sensors.rain = digitalRead(RAIN_PIN) == LOW;
 
-  // EC and salinity are derived so Firebase receives the complete schema expected by the web/rules.
-  sensors.salinity = roundToOneDecimal(mapAdcToFloat(DO_PIN, 5.0f, 35.0f));
+  sensors.salinity = roundToOneDecimal(mapAdcToFloat(SALINITY_PIN, 5.0f, 35.0f));
   sensors.ec = roundToOneDecimal(10.0f + sensors.salinity * 0.85f);
 
   if (!simulation.enabled) return sensors;

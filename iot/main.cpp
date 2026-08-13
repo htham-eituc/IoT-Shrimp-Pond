@@ -4,6 +4,7 @@
 #include "src/automation.h"
 #include "src/commands.h"
 #include "src/config.h"
+#include "src/display.h"
 #include "src/firebase_client.h"
 #include "src/hardware.h"
 #include "src/sensors.h"
@@ -21,6 +22,7 @@ SimulationControl simulation = {false, "normal", "initial"};
 void setup() {
   Serial.begin(115200);
   setupPins();
+  setupDisplays();
   connectWiFi();
   setupFirebase();
 }
@@ -71,4 +73,5 @@ void loop() {
   }
 
   uploadState(sensors, currentDevices, status, currentMode);
+  updateDisplays(sensors, currentDevices, status, currentMode, simulation);
 }

@@ -74,7 +74,7 @@ At 1366×768, the current layout cannot keep the primary operating picture in on
 | Normal/Warning/Critical/Info label for each metric | A | Use text/icon/color. The state logic should remain in presentation selectors and use settings/alerts where defined. |
 | Configured safe range | B | Show in a tooltip, detail panel, or second line on focus/selection. |
 | Recent sparkline | B | Useful direction-of-travel context; show for selected/priority metrics or in a telemetry drawer on the minimum viewport. |
-| “Six inputs plus derived salinity” explanation | C | Documentation/help, not command-center content. |
+| Dedicated salinity input and derived EC explanation | C | Documentation/help, not command-center content. |
 | No EC threshold/boolean-protocol explanatory notes | C | Retain in detail/help, not in the primary grid. |
 
 ### 2.4 Control

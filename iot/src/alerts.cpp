@@ -209,7 +209,7 @@ void uploadState(const SensorReadings &sensors, const DeviceState &devices, cons
   writeAlertIfChanged(sensors, status, timestampMs);
 
   Serial.printf(
-      "Firebase upload %s | mode=%s status=%s ph=%.1f do=%.1f temp=%.1f level=%d rain=%s\n",
+      "Firebase upload %s | mode=%s status=%s ph=%.1f do=%.1f temp=%.1f level=%d rain=%s ec=%.1f salinity=%.1f\n",
       ok ? "ok" : "failed",
       mode.c_str(),
       status.c_str(),
@@ -217,5 +217,7 @@ void uploadState(const SensorReadings &sensors, const DeviceState &devices, cons
       sensors.dissolvedOxygen,
       sensors.temperature,
       sensors.waterLevel,
-      sensors.rain ? "true" : "false");
+      sensors.rain ? "true" : "false",
+      sensors.ec,
+      sensors.salinity);
 }

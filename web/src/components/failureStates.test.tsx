@@ -79,9 +79,6 @@ describe("localized operational failure and empty states", () => {
         commands={[]}
         telemetry={[]}
         connectionState="stale"
-        selectedScenario="normal"
-        demoScenariosEnabled={false}
-        onScenarioChange={() => undefined}
         onOpenDetail={() => undefined}
       />,
     );

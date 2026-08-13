@@ -20,5 +20,6 @@ String alertPath(uint64_t timestampMs);
 String eventPath(uint64_t timestampMs, const String &suffix);
 String telemetryPath(uint64_t timestampMs);
 uint64_t currentTimestampMs();
+bool systemTimeReady();
 bool refreshSimulationControl(SimulationControl &control);
 void stopSimulationOverride(SimulationControl &control, const char *reason);

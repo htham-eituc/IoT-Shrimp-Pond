@@ -124,6 +124,15 @@ export class MockPondDataSource implements PondDataSource {
     return { id, value: clone(command) };
   }
 
+  async resolveAlert(pondId: string, alertId: string, resolvedAtMs = this.now()): Promise<void> {
+    this.assertFarmerForPond(pondId);
+    const alert = this.database.alerts[pondId]?.[alertId];
+    if (!alert) throw new Error(`Alert ${alertId} was not found.`);
+    alert.status = "resolved";
+    alert.resolvedAtMs = resolvedAtMs;
+    this.emit();
+  }
+
   setDemoScenario(pondId: string, scenario: DemoScenario): void {
     this.assertFarmerForPond(pondId);
     this.controller.setScenario(pondId, scenario);

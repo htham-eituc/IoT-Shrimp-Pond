@@ -5,7 +5,7 @@ import { getActiveLocale } from "../i18n";
 
 export type MetricTone = "normal" | "warning" | "critical" | "info" | "offline";
 export type SensorMetricKey = keyof PondSensors;
-export type PrimaryMetricKey = Exclude<SensorMetricKey, "ec" | "salinity"> | "conductivitySalinity";
+export type PrimaryMetricKey = Exclude<SensorMetricKey, "ec">;
 
 export interface MetricViewModel {
   key: SensorMetricKey;
@@ -18,19 +18,7 @@ export interface MetricViewModel {
   trend: number[];
 }
 
-export interface ConductivitySalinityMetricViewModel {
-  key: "conductivitySalinity";
-  label: string;
-  salinityLabel: string;
-  conductivityLabel: string;
-  salinity: MetricViewModel;
-  conductivity: MetricViewModel;
-  tone: MetricTone;
-  state: string;
-  trend: number[];
-}
-
-export type PrimaryMetricViewModel = MetricViewModel | ConductivitySalinityMetricViewModel;
+export type PrimaryMetricViewModel = MetricViewModel & { key: PrimaryMetricKey };
 
 export function createMetricViewModels(
   sensors: PondSensors,
@@ -54,36 +42,12 @@ export function createMetricViewModels(
 
 export function createPrimaryMetricViewModels(
   metrics: readonly MetricViewModel[],
-  t: TFunction,
 ): PrimaryMetricViewModel[] {
-  const salinity = metrics.find((metric) => metric.key === "salinity");
-  const conductivity = metrics.find((metric) => metric.key === "ec");
-  if (!salinity || !conductivity) return [...metrics];
-
-  const dominant = metricSeverity(salinity.tone) >= metricSeverity(conductivity.tone) ? salinity : conductivity;
-  const composite: ConductivitySalinityMetricViewModel = {
-    key: "conductivitySalinity",
-    label: t("conductivitySalinity.label", { ns: "sensors" }),
-    salinityLabel: t("conductivitySalinity.salinity", { ns: "sensors" }),
-    conductivityLabel: t("conductivitySalinity.conductivity", { ns: "sensors" }),
-    salinity,
-    conductivity,
-    tone: dominant.tone,
-    state: dominant.state,
-    trend: salinity.trend,
-  };
-
-  return [...metrics.filter((metric) => metric.key !== "ec" && metric.key !== "salinity"), composite];
-}
-
-export function isConductivitySalinityMetric(
-  metric: PrimaryMetricViewModel,
-): metric is ConductivitySalinityMetricViewModel {
-  return metric.key === "conductivitySalinity";
+  return metrics.filter((metric): metric is PrimaryMetricViewModel => metric.key !== "ec");
 }
 
 export function getPrimaryMetricKeyForSensor(sensor: SensorMetricKey): PrimaryMetricKey {
-  return sensor === "ec" || sensor === "salinity" ? "conductivitySalinity" : sensor;
+  return sensor === "ec" ? "salinity" : sensor;
 }
 
 export function metricSeverity(tone: MetricTone): number {
@@ -129,10 +93,10 @@ function getMetricTone(
 ): MetricTone {
   const activeAlerts = alerts.map((alert) => alert.value).filter((alert) => alert.status === "active");
   const hasCriticalAlertForMetric = activeAlerts.some(
-    (alert) => alert.severity === "critical" && alert.measurements && key in alert.measurements,
+    (alert) => alert.severity === "critical" && alertAffectsMetric(alert, key),
   );
   const hasWarningAlertForMetric = activeAlerts.some(
-    (alert) => alert.severity === "warning" && alert.measurements && key in alert.measurements,
+    (alert) => alert.severity === "warning" && alertAffectsMetric(alert, key),
   );
 
   if (hasCriticalAlertForMetric) return "critical";
@@ -178,6 +142,18 @@ function getMetricTone(
 
   if (key === "rain") return sensors.rain ? "info" : "normal";
   return "info";
+}
+
+export function alertAffectsMetric(alert: PondAlert, key: SensorMetricKey): boolean {
+  const type = alert.type.toLowerCase().replaceAll("_", "-");
+  if (type === "hypoxia" || type.endsWith("-do")) return key === "do";
+  if (type === "rain-overflow") return key === "rain" || key === "waterLevel";
+  if (type.includes("water-level")) return key === "waterLevel";
+  if (type === "heat-salinity") return key === "temperature" || key === "salinity";
+  if (type.includes("temperature")) return key === "temperature";
+  if (type.endsWith("-ph")) return key === "ph";
+  const measuredKeys = Object.keys(alert.measurements ?? {});
+  return measuredKeys.length === 1 && measuredKeys[0] === key;
 }
 
 function getSafeRange(

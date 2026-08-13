@@ -76,9 +76,11 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
           if (telemetryRequestSequence.current !== telemetryRequestId) return;
           commit({ telemetry: nextTelemetry });
         })
-        .catch(() => {
+        .catch((reason: unknown) => {
           if (telemetryRequestSequence.current !== telemetryRequestId) return;
-          commit({ error: "telemetryLoad" });
+          // History is supplementary. Keep the realtime dashboard available if
+          // its bounded telemetry query is denied, unindexed, or malformed.
+          console.error(`Could not load telemetry for pond ${pondId}.`, reason);
         })
         .finally(() => {
           if (telemetryRequestSequence.current !== telemetryRequestId) return;
@@ -116,13 +118,9 @@ export function usePondDashboard(dataSource: PondDataSource, pondId: string): Da
             : current
         ));
       })
-      .catch(() => {
+      .catch((reason: unknown) => {
         if (!active || telemetryRequestSequence.current !== telemetryRequestId) return;
-        setState((current) => (
-          isCurrentScope(current, scope)
-            ? { ...current, error: "telemetryRefresh" }
-            : current
-        ));
+        console.error(`Could not refresh telemetry for pond ${pondId}.`, reason);
       })
       .finally(() => {
         if (!active || telemetryRequestSequence.current !== telemetryRequestId) return;

@@ -21,9 +21,10 @@ SensorReadings readSensors(const SimulationControl &simulation) {
   sensors.waterLevel = static_cast<int>(roundf(mapAdcToFloat(WATER_LEVEL_PIN, 0.0f, 100.0f)));
   sensors.rain = digitalRead(RAIN_PIN) == LOW;
 
-  // EC and salinity are derived so Firebase receives the complete schema expected by the web/rules.
-  sensors.salinity = roundToOneDecimal(mapAdcToFloat(DO_PIN, 5.0f, 35.0f));
-  sensors.ec = roundToOneDecimal(10.0f + sensors.salinity * 0.85f);
+  // Wokwi represents the analog EC probe with its own potentiometer. Salinity
+  // is derived from conductivity because it is not a separate physical probe.
+  sensors.ec = roundToOneDecimal(mapAdcToFloat(EC_PIN, 5.0f, 35.0f));
+  sensors.salinity = roundToOneDecimal(sensors.ec * 1.09f);
 
   if (!simulation.enabled) return sensors;
 

@@ -416,8 +416,13 @@ Stores historical sensor measurements.
 ## Path
 
 ```text
-/telemetry/{pondId}/{timestampMs}
+/telemetry/{pondId}/{recordId}
 ```
+
+The current device firmware uses rolling keys `slot-000` through `slot-099`.
+Each upload overwrites one slot, so a pond retains at most the newest 100
+firmware samples. The embedded `timestampMs` field remains the authoritative
+time and is used by dashboard queries and sorting.
 
 ## Example
 
@@ -954,6 +959,7 @@ Recommended prototype `database.rules.json`:
     "telemetry": {
       "$pondId": {
         ".read": "auth != null && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
+        ".indexOn": ["timestampMs"],
 
         "$timestampMs": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'device' && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
@@ -968,7 +974,17 @@ Recommended prototype `database.rules.json`:
         ".read": "auth != null && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
 
         "$alertId": {
-          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'device' && root.child('users').child(auth.uid).child('pondId').val() === $pondId"
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'device' && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
+
+          "status": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && root.child('users').child(auth.uid).child('pondId').val() === $pondId && data.val() === 'active' && newData.val() === 'resolved'",
+            ".validate": "newData.val() === 'active' || newData.val() === 'resolved'"
+          },
+
+          "resolvedAtMs": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && root.child('users').child(auth.uid).child('pondId').val() === $pondId && newData.isNumber() && newData.val() >= 0",
+            ".validate": "newData.val() === null || (newData.isNumber() && newData.val() >= 0)"
+          }
         }
       }
     },

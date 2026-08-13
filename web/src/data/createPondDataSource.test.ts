@@ -5,7 +5,6 @@ import { createPondDataSource } from "./createPondDataSource";
 import { TEST_FARMER_ACCESS } from "../test/fixtures";
 
 const FIREBASE_ENVIRONMENT = {
-  VITE_DATA_MODE: "firebase",
   VITE_FIREBASE_API_KEY: "test-api-key",
   VITE_FIREBASE_AUTH_DOMAIN: "test.firebaseapp.com",
   VITE_FIREBASE_DATABASE_URL: "https://test-default-rtdb.firebaseio.com",
@@ -16,13 +15,7 @@ const FIREBASE_ENVIRONMENT = {
 };
 
 describe("PondDataSource application composition", () => {
-  it("boots in mock mode by default without Firebase configuration", () => {
-    const source = createPondDataSource({}, TEST_FARMER_ACCESS);
-    expect(source).toBeInstanceOf(MockPondDataSource);
-    if (source instanceof MockPondDataSource) source.dispose();
-  });
-
-  it("selects Firebase once and forwards environment configuration", () => {
+  it("selects Firebase and forwards environment configuration", () => {
     const firebaseSource = new MockPondDataSource(TEST_FARMER_ACCESS);
     const createFirebaseSource = vi.fn(() => firebaseSource);
 
@@ -45,8 +38,7 @@ describe("PondDataSource application composition", () => {
   });
 
   it("fails fast when Firebase mode is missing configuration", () => {
-    expect(() => createPondDataSource({ VITE_DATA_MODE: "firebase" }, TEST_FARMER_ACCESS)).toThrow("VITE_FIREBASE_API_KEY");
-    expect(() => createPondDataSource({ VITE_DATA_MODE: "unknown" }, TEST_FARMER_ACCESS)).toThrow("VITE_DATA_MODE");
+    expect(() => createPondDataSource({}, TEST_FARMER_ACCESS)).toThrow("VITE_FIREBASE_API_KEY");
   });
 
   it("does not expose device-owned Firebase writes through the web data source", () => {
@@ -58,25 +50,4 @@ describe("PondDataSource application composition", () => {
     expect(methods).not.toContain("createAlert");
   });
 
-  it("creates fresh pond state for a later authorized account", async () => {
-    const userASource = createPondDataSource({}, TEST_FARMER_ACCESS);
-    await userASource.updatePondName("pond-001", "User A private state");
-    if (userASource instanceof MockPondDataSource) userASource.dispose();
-
-    const userBSource = createPondDataSource({}, {
-      profile: {
-        role: "farmer",
-        pondId: "pond-001",
-        displayName: "User B",
-      },
-    });
-    let userBPondName: string | null = null;
-    const unsubscribe = userBSource.subscribePond("pond-001", (pond) => {
-      userBPondName = pond?.name ?? null;
-    });
-
-    expect(userBPondName).toBe("Smart Shrimp Pond 001");
-    unsubscribe();
-    if (userBSource instanceof MockPondDataSource) userBSource.dispose();
-  });
 });

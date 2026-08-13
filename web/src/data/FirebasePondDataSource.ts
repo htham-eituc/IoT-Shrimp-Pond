@@ -9,6 +9,7 @@ import {
   ref,
   runTransaction,
   set,
+  update,
   startAt,
   type Database,
   type QueryConstraint,
@@ -191,6 +192,17 @@ export class FirebasePondDataSource implements PondDataSource {
     if (!commandRef.key) throw new Error("Firebase could not allocate a command ID.");
     await set(commandRef, command);
     return { id: commandRef.key, value: command };
+  }
+
+  async resolveAlert(pondId: string, alertId: string, resolvedAtMs = Date.now()): Promise<void> {
+    this.assertFarmerForPond(pondId);
+    if (!alertId || alertId.includes("/") || !Number.isFinite(resolvedAtMs) || resolvedAtMs < 0) {
+      throw new Error("Invalid alert resolution request.");
+    }
+    await update(ref(this.database, `alerts/${pondId}/${alertId}`), {
+      status: "resolved",
+      resolvedAtMs,
+    });
   }
 
   private assertFarmerForPond(pondId: string): void {

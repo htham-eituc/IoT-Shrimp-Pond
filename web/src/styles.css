@@ -1802,6 +1802,27 @@ button:disabled {
   font-size: var(--type-caption);
 }
 
+.record-resolve-action {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.record-resolve-button {
+  min-height: 36px;
+  border: 1px solid var(--color-normal);
+  color: var(--color-normal);
+  background: rgb(var(--rgb-normal) / 10%);
+}
+
+.record-resolve-button:hover:not(:disabled) {
+  background: rgb(var(--rgb-normal) / 18%);
+}
+
+.record-resolve-action span {
+  color: var(--color-critical);
+  font-size: var(--type-caption);
+}
+
 .record-meta dt {
   margin-bottom: 0.18rem;
   color: var(--color-text-faint);

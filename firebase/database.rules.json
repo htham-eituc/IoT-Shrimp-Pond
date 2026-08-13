@@ -161,6 +161,7 @@
     "telemetry": {
       "$pondId": {
         ".read": "auth != null && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
+        ".indexOn": ["timestampMs"],
 
         "$timestampMs": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'device' && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
@@ -175,7 +176,17 @@
         ".read": "auth != null && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
 
         "$alertId": {
-          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'device' && root.child('users').child(auth.uid).child('pondId').val() === $pondId"
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'device' && root.child('users').child(auth.uid).child('pondId').val() === $pondId",
+
+          "status": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && root.child('users').child(auth.uid).child('pondId').val() === $pondId && data.val() === 'active' && newData.val() === 'resolved'",
+            ".validate": "newData.val() === 'active' || newData.val() === 'resolved'"
+          },
+
+          "resolvedAtMs": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && root.child('users').child(auth.uid).child('pondId').val() === $pondId && newData.isNumber() && newData.val() >= 0",
+            ".validate": "newData.val() === null || (newData.isNumber() && newData.val() >= 0)"
+          }
         }
       }
     },

@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { BellRing, ListTree } from "lucide-react";
+import { BellRing, CheckCircle2, ListTree } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import type { KeyedRecord, PondAlert, PondEvent } from "../domain";
 import { filterAlerts, filterEvents, type AlertFilters, type EventFilters } from "../logs/logFilters";
 import { StatusBadge } from "./StatusBadge";
 import { useLocaleFormatters } from "../i18n/formatters";
+import type { PondDataSource } from "../data";
 
 interface AlertsEventsViewProps {
+  dataSource: PondDataSource;
+  pondId: string;
   alerts: Array<KeyedRecord<PondAlert>>;
   events: Array<KeyedRecord<PondEvent>>;
 }
@@ -15,7 +18,7 @@ interface AlertsEventsViewProps {
 const INITIAL_ALERT_FILTERS: AlertFilters = { status: "all", severity: "all", type: "all" };
 const INITIAL_EVENT_FILTERS: EventFilters = { type: "all", source: "all" };
 
-export function AlertsEventsView({ alerts, events }: AlertsEventsViewProps) {
+export function AlertsEventsView({ dataSource, pondId, alerts, events }: AlertsEventsViewProps) {
   const { t } = useTranslation(["common", "alerts", "events"]);
   const formatters = useLocaleFormatters();
   const [alertFilters, setAlertFilters] = useState<AlertFilters>(INITIAL_ALERT_FILTERS);
@@ -75,7 +78,7 @@ export function AlertsEventsView({ alerts, events }: AlertsEventsViewProps) {
           <EmptyLog message={t(alerts.length === 0 ? "noPublished" : "noMatch", { ns: "alerts" })} />
         ) : (
           <ol className="record-list">
-            {visibleAlerts.map((alert) => <AlertRecord key={alert.id} alert={alert} />)}
+            {visibleAlerts.map((alert) => <AlertRecord key={alert.id} alert={alert} dataSource={dataSource} pondId={pondId} />)}
           </ol>
         )}
       </section>
@@ -122,10 +125,23 @@ export function AlertsEventsView({ alerts, events }: AlertsEventsViewProps) {
   );
 }
 
-function AlertRecord({ alert: { id, value } }: { alert: KeyedRecord<PondAlert> }) {
+function AlertRecord({ alert: { id, value }, dataSource, pondId }: { alert: KeyedRecord<PondAlert>; dataSource: PondDataSource; pondId: string }) {
   const { t } = useTranslation(["common", "sensors", "alerts"]);
   const formatters = useLocaleFormatters();
   const measurements = Object.entries(value.measurements ?? {});
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState(false);
+  async function resolve() {
+    setResolving(true);
+    setResolveError(false);
+    try {
+      await dataSource.resolveAlert(pondId, id);
+    } catch {
+      setResolveError(true);
+    } finally {
+      setResolving(false);
+    }
+  }
   return (
     <li className={`record-card record-card--${value.severity}`}>
       <div className="record-card__primary">
@@ -150,6 +166,14 @@ function AlertRecord({ alert: { id, value } }: { alert: KeyedRecord<PondAlert> }
         <div><dt>{t("alertId", { ns: "alerts" })}</dt><dd>{id}</dd></div>
         <div><dt>{t("created", { ns: "common" })}</dt><dd><Timestamp value={value.createdAtMs} /></dd></div>
         <div><dt>{t("resolved", { ns: "common" })}</dt><dd>{value.resolvedAtMs === null ? t("notResolved", { ns: "common" }) : <Timestamp value={value.resolvedAtMs} />}</dd></div>
+        {value.status === "active" && (
+          <div className="record-resolve-action">
+            <button className="button record-resolve-button" type="button" disabled={resolving} onClick={() => void resolve()}>
+              <CheckCircle2 aria-hidden="true" /> {t(resolving ? "resolving" : "resolve", { ns: "alerts" })}
+            </button>
+            {resolveError && <span role="alert">{t("resolveFailed", { ns: "alerts" })}</span>}
+          </div>
+        )}
       </dl>
     </li>
   );

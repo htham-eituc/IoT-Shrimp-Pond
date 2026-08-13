@@ -10,19 +10,17 @@ import type {
   PondState,
   TelemetryRecord,
 } from "../domain";
-import type { DemoScenario, PondDataSource } from "../data";
+import type { PondDataSource } from "../data";
 import {
   createMetricViewModels,
   createPrimaryMetricViewModels,
   getPrimaryMetricKeyForSensor,
-  isConductivitySalinityMetric,
   metricSeverity,
 } from "../presentation/metrics";
 import type { SensorMetricKey } from "../presentation/metrics";
 import type { ConnectionState } from "../presentation/connection";
 import { ActiveAlertsPanel } from "./ActiveAlertsPanel";
 import { CompactDeviceControls } from "./CompactDeviceControls";
-import { ConductivitySalinityCard } from "./ConductivitySalinityCard";
 import { MetricCard } from "./MetricCard";
 import { Pond3DVisualization } from "./Pond3D";
 import { createPondProbeReadings } from "./Pond3D/pondSceneModel";
@@ -39,13 +37,8 @@ interface CommandCenterViewProps {
   commands: Array<KeyedRecord<Command>>;
   telemetry: Array<KeyedRecord<TelemetryRecord>>;
   connectionState: ConnectionState;
-  selectedScenario: DemoScenario;
-  demoScenariosEnabled: boolean;
-  onScenarioChange(scenario: DemoScenario): void;
   onOpenDetail(view: DetailView): void;
 }
-
-const DEMO_SCENARIOS: ReadonlyArray<DemoScenario> = ["normal", "hypoxia", "rain_overflow", "heat_salinity"];
 
 export function CommandCenterView({
   dataSource,
@@ -56,20 +49,17 @@ export function CommandCenterView({
   commands,
   telemetry,
   connectionState,
-  selectedScenario,
-  demoScenariosEnabled,
-  onScenarioChange,
   onOpenDetail,
 }: CommandCenterViewProps) {
-  const { t, i18n } = useTranslation(["common", "dashboard", "scenarios"]);
+  const { t, i18n } = useTranslation(["common", "dashboard"]);
   const metrics = useMemo(
     () => createMetricViewModels(pond.sensors, settings, alerts, telemetry, t, i18n.resolvedLanguage ?? i18n.language),
     [alerts, i18n.language, i18n.resolvedLanguage, pond.sensors, settings, t, telemetry],
   );
   const probes = useMemo(() => createPondProbeReadings(metrics), [metrics]);
   const prioritizedMetrics = useMemo(
-    () => createPrimaryMetricViewModels(metrics, t).sort((left, right) => metricSeverity(right.tone) - metricSeverity(left.tone)),
-    [metrics, t],
+    () => createPrimaryMetricViewModels(metrics).sort((left, right) => metricSeverity(right.tone) - metricSeverity(left.tone)),
+    [metrics],
   );
   const [focusedSensor, setFocusedSensor] = useState<SensorMetricKey | null>(null);
   const [focusedDevice, setFocusedDevice] = useState<CommandDevice | null>(null);
@@ -106,15 +96,6 @@ export function CommandCenterView({
             </button>
           </div>
         </header>
-
-        {demoScenariosEnabled && (
-          <label className="command-scenario-select">
-            <span>{t("demoControl", { ns: "scenarios" })}</span>
-            <select value={selectedScenario} onChange={(event) => onScenarioChange(event.target.value as DemoScenario)}>
-              {DEMO_SCENARIOS.map((scenario) => <option key={scenario} value={scenario}>{t(scenario, { ns: "scenarios" })}</option>)}
-            </select>
-          </label>
-        )}
 
         <div className="command-center__visualization">
           <Pond3DVisualization
@@ -157,20 +138,13 @@ export function CommandCenterView({
             </button>
           </header>
           <div className="compact-metric-grid">
-            {prioritizedMetrics.map((metric) => isConductivitySalinityMetric(metric) ? (
-              <ConductivitySalinityCard
-                key={metric.key}
-                id={`command-metric-${metric.key}`}
-                metric={metric}
-                highlighted={focusedSensor === "ec" || focusedSensor === "salinity"}
-              />
-            ) : (
+            {prioritizedMetrics.map((metric) => (
               <MetricCard
                 key={metric.key}
                 id={`command-metric-${metric.key}`}
                 metric={metric}
                 compact
-                highlighted={focusedSensor === metric.key}
+                highlighted={focusedSensor === metric.key || (metric.key === "salinity" && focusedSensor === "ec")}
               />
             ))}
           </div>

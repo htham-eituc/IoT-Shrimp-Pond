@@ -1,4 +1,4 @@
-export { createPondDataSource, isDemoScenarioSource } from "./createPondDataSource";
+export { createPondDataSource } from "./createPondDataSource";
 export { FirebasePondDataSource } from "./FirebasePondDataSource";
 export { MockIoTController } from "./MockIoTController";
 export { MockPondDataSource } from "./MockPondDataSource";
@@ -13,6 +13,5 @@ export type {
   TelemetryQueryOptions,
   Unsubscribe,
 } from "./PondDataSource";
-export type { DemoScenarioSource } from "./createPondDataSource";
 export type { FirebaseWebConfig as FirebasePondConfig } from "../firebase/client";
 export type { DemoScenario, DemoScenarioState } from "./MockIoTController";

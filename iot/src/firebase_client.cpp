@@ -11,6 +11,7 @@
 
 #include "addons/RTDBHelper.h"
 #include "addons/TokenHelper.h"
+#include "config.h"
 
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -51,7 +52,11 @@ String eventPath(uint64_t timestampMs, const String &suffix) {
 }
 
 String telemetryPath(uint64_t timestampMs) {
-  return "/telemetry/" + String(POND_ID) + "/" + timestampString(timestampMs);
+  const uint16_t slot = static_cast<uint16_t>(
+      (timestampMs / SENSOR_UPLOAD_INTERVAL_MS) % TELEMETRY_RETENTION_RECORDS);
+  char slotKey[16];
+  snprintf(slotKey, sizeof(slotKey), "slot-%03u", slot);
+  return "/telemetry/" + String(POND_ID) + "/" + String(slotKey);
 }
 
 namespace {
@@ -112,6 +117,10 @@ uint64_t currentTimestampMs() {
   }
 
   return static_cast<uint64_t>(millis());
+}
+
+bool systemTimeReady() {
+  return time(nullptr) > 1700000000;
 }
 
 void connectWiFi() {

@@ -3,8 +3,7 @@ import { CheckCircle2, Circle, LoaderCircle, LogOut, Waves } from "lucide-react"
 import { useTranslation } from "react-i18next";
 import type { DashboardSession } from "../domain/session";
 import type { KeyedRecord, PondAlert, PondSettings, PondState, TelemetryRecord } from "../domain";
-import type { DemoScenario, PondDataSource } from "../data";
-import { isDemoScenarioSource } from "../data";
+import type { PondDataSource } from "../data";
 import { usePondDashboard } from "../hooks/usePondDashboard";
 import { useLocaleFormatters } from "../i18n/formatters";
 import { createMetricViewModels } from "../presentation/metrics";
@@ -31,14 +30,12 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
   const { t } = useTranslation(["common", "dashboard", "auth"]);
   const formatters = useLocaleFormatters();
   const [detailView, setDetailView] = useState<DetailView | null>(null);
-  const [selectedScenario, setSelectedScenario] = useState<DemoScenario>("normal");
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
   const dashboard = usePondDashboard(dataSource, session.user.pondId);
   const currentTimeMs = useCurrentTimeMs();
-  const demoScenariosEnabled = isDemoScenarioSource(dataSource);
   const closeDetail = useCallback(() => {
     setDetailView(null);
     setSettingsDirty(false);
@@ -60,11 +57,6 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
     setDetailView(null);
     setSettingsDirty(false);
     void onLogout();
-  }
-
-  function selectScenario(scenario: DemoScenario) {
-    setSelectedScenario(scenario);
-    if (isDemoScenarioSource(dataSource)) dataSource.setDemoScenario(session.user.pondId, scenario);
   }
 
   const pondName = dashboard.pond?.name ?? session.pond.name;
@@ -124,9 +116,6 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
           <DashboardContent
             dataSource={dataSource}
             pondId={session.user.pondId}
-            selectedScenario={selectedScenario}
-            demoScenariosEnabled={demoScenariosEnabled}
-            onScenarioChange={selectScenario}
             onOpenDetail={openDetail}
             dashboard={dashboard}
             currentTimeMs={currentTimeMs}
@@ -168,18 +157,12 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
 function DashboardContent({
   dataSource,
   pondId,
-  selectedScenario,
-  demoScenariosEnabled,
-  onScenarioChange,
   onOpenDetail,
   dashboard,
   currentTimeMs,
 }: {
   dataSource: PondDataSource;
   pondId: string;
-  selectedScenario: DemoScenario;
-  demoScenariosEnabled: boolean;
-  onScenarioChange(scenario: DemoScenario): void;
   onOpenDetail(view: DetailView): void;
   dashboard: ReturnType<typeof usePondDashboard>;
   currentTimeMs: number | null;
@@ -214,9 +197,6 @@ function DashboardContent({
       commands={dashboard.commands}
       telemetry={dashboard.telemetry}
       connectionState={connection.state}
-      selectedScenario={selectedScenario}
-      demoScenariosEnabled={demoScenariosEnabled}
-      onScenarioChange={onScenarioChange}
       onOpenDetail={onOpenDetail}
     />
   );
@@ -243,7 +223,7 @@ function DetailContent({
     return <RealtimeView pond={pond} settings={dashboard.settings} alerts={dashboard.alerts} telemetry={dashboard.telemetry} />;
   }
   if (view === "history") return <TelemetryHistoryView records={dashboard.telemetry} loading={dashboard.loading} />;
-  if (view === "alerts") return <AlertsEventsView alerts={dashboard.alerts} events={dashboard.events} />;
+  if (view === "alerts") return <AlertsEventsView dataSource={dataSource} pondId={pondId} alerts={dashboard.alerts} events={dashboard.events} />;
 
   if (!dashboard.settings) {
     return <StatePanel title={t("settingsUnavailable")} description={t(view === "control" ? "settingsRequiredForCommands" : "noSettingsDescription")} tone="warning" />;

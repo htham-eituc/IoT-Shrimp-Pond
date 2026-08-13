@@ -57,6 +57,11 @@ void loop() {
   if (now - lastUploadMs < SENSOR_UPLOAD_INTERVAL_MS) {
     return;
   }
+  if (!systemTimeReady()) {
+    Serial.println("Waiting for NTP time before uploading timestamped data...");
+    delay(500);
+    return;
+  }
   lastUploadMs = now;
 
   SensorReadings sensors = readSensors(simulation);

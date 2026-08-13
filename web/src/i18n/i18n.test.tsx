@@ -115,7 +115,7 @@ describe("application localization", () => {
       renderToStaticMarkup(<DeviceControlPanel dataSource={source} pondId="pond-001" connected={pond.connected} devices={pond.devices} settings={settings} commands={[]} />),
       renderToStaticMarkup(<SettingsView dataSource={source} pondId="pond-001" settings={settings} />),
       renderToStaticMarkup(<TelemetryHistoryView records={records} loading={false} />),
-      renderToStaticMarkup(<AlertsEventsView alerts={alerts} events={events} />),
+      renderToStaticMarkup(<AlertsEventsView dataSource={source} pondId="pond-001" alerts={alerts} events={events} />),
       renderToStaticMarkup(<PondVisualization pond={pond} />),
     ].join("");
 

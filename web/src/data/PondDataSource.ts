@@ -44,4 +44,5 @@ export interface PondDataSource {
   updateSettings(pondId: string, changes: DeepPartial<PondSettings>): Promise<PondSettings>;
   updatePondName(pondId: string, name: string): Promise<void>;
   createCommand(pondId: string, command: CreateCommandRequest): Promise<KeyedRecord<Command>>;
+  resolveAlert(pondId: string, alertId: string, resolvedAtMs?: number): Promise<void>;
 }

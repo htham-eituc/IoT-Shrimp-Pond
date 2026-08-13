@@ -1122,6 +1122,26 @@ Create alert/event if required
 
 ---
 
+Wokwi input and status display mapping:
+
+```text
+GPIO 34 -> pH potentiometer
+GPIO 35 -> dissolved oxygen potentiometer
+GPIO 36 -> salinity potentiometer
+GPIO 32 -> temperature potentiometer
+GPIO 33 -> water-level potentiometer
+GPIO 25 -> rain switch
+GPIO 13 -> OK status LED
+GPIO 14 -> warning status LED
+GPIO 15 -> critical status LED
+GPIO 26 -> LCD I2C SDA
+GPIO 27 -> LCD I2C SCL
+```
+
+The LCDs show sensor values, output devices, mode, simulation state, and
+`OK`/`WARN`/`CRIT`. The three dedicated status LEDs mirror the same
+`normal`/`warning`/`critical` pond states.
+
 # 18. Automatic Workflow Ownership
 
 Without Node-RED or a backend, the ESP8266 / Wokwi firmware owns automatic response logic.

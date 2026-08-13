@@ -16,6 +16,9 @@
     { "type": "wokwi-led", "id": "ledFeeder", "top": 60, "left": 220, "attrs": { "color": "yellow", "label": "Feeder" } },
     { "type": "wokwi-led", "id": "ledBuzzer", "top": 120, "left": 220, "attrs": { "color": "red", "label": "Buzzer" } },
     { "type": "wokwi-led", "id": "ledBeacon", "top": 180, "left": 220, "attrs": { "color": "orange", "label": "Warning" } },
+    { "type": "wokwi-led", "id": "ledStatusOk", "top": -150, "left": 340, "attrs": { "color": "green", "label": "OK" } },
+    { "type": "wokwi-led", "id": "ledStatusWarn", "top": -90, "left": 340, "attrs": { "color": "yellow", "label": "WARN" } },
+    { "type": "wokwi-led", "id": "ledStatusCrit", "top": -30, "left": 340, "attrs": { "color": "red", "label": "CRIT" } },
     { "type": "wokwi-lcd1602", "id": "lcdSensors", "top": 260, "left": 150, "attrs": { "pins": "i2c", "i2cAddress": "0x27" } },
     { "type": "wokwi-lcd1602", "id": "lcdStatus", "top": 360, "left": 150, "attrs": { "pins": "i2c", "i2cAddress": "0x3F" } }
   ],
@@ -58,6 +61,13 @@
     [ "ledBuzzer:C", "esp:GND.2", "black", [] ],
     [ "ledBeacon:A", "esp:22", "orange", [] ],
     [ "ledBeacon:C", "esp:GND.2", "black", [] ],
+
+    [ "ledStatusOk:A", "esp:13", "green", [] ],
+    [ "ledStatusOk:C", "esp:GND.2", "black", [] ],
+    [ "ledStatusWarn:A", "esp:14", "yellow", [] ],
+    [ "ledStatusWarn:C", "esp:GND.2", "black", [] ],
+    [ "ledStatusCrit:A", "esp:15", "red", [] ],
+    [ "ledStatusCrit:C", "esp:GND.2", "black", [] ],
 
     [ "lcdSensors:GND", "esp:GND.2", "black", [] ],
     [ "lcdSensors:VCC", "esp:5V", "red", [] ],

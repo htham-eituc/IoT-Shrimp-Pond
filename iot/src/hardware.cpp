@@ -12,6 +12,9 @@ void setupPins() {
   pinMode(FEEDER_LED_PIN, OUTPUT);
   pinMode(BUZZER_LED_PIN, OUTPUT);
   pinMode(WARNING_LED_PIN, OUTPUT);
+  pinMode(STATUS_NORMAL_LED_PIN, OUTPUT);
+  pinMode(STATUS_WARNING_LED_PIN, OUTPUT);
+  pinMode(STATUS_CRITICAL_LED_PIN, OUTPUT);
 }
 
 void applyOutputs(const DeviceState &devices) {
@@ -21,4 +24,10 @@ void applyOutputs(const DeviceState &devices) {
   digitalWrite(FEEDER_LED_PIN, devices.feeder);
   digitalWrite(BUZZER_LED_PIN, devices.buzzer);
   digitalWrite(WARNING_LED_PIN, devices.warningBeacon);
+}
+
+void applyStatusIndicators(const String &status) {
+  digitalWrite(STATUS_NORMAL_LED_PIN, status == "normal");
+  digitalWrite(STATUS_WARNING_LED_PIN, status == "warning");
+  digitalWrite(STATUS_CRITICAL_LED_PIN, status == "critical");
 }

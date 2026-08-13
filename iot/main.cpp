@@ -63,6 +63,7 @@ void loop() {
 
   SensorReadings sensors = readSensors(simulation);
   String status = statusFor(sensors);
+  applyStatusIndicators(status);
 
   if (currentMode == "automatic") {
     DeviceState nextDevices = automaticDevicesFor(sensors, status);

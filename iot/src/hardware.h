@@ -4,3 +4,4 @@
 
 void setupPins();
 void applyOutputs(const DeviceState &devices);
+void applyStatusIndicators(const String &status);

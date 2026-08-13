@@ -16,6 +16,10 @@ constexpr int FEEDER_LED_PIN = 19;
 constexpr int BUZZER_LED_PIN = 21;
 constexpr int WARNING_LED_PIN = 22;
 
+constexpr int STATUS_NORMAL_LED_PIN = 13;
+constexpr int STATUS_WARNING_LED_PIN = 14;
+constexpr int STATUS_CRITICAL_LED_PIN = 15;
+
 constexpr int LCD_SDA_PIN = 26;
 constexpr int LCD_SCL_PIN = 27;
 constexpr int SENSOR_LCD_ADDRESS = 0x27;

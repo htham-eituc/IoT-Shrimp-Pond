@@ -14,6 +14,7 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import { DetailDrawer } from "./DetailDrawer";
 import { DeviceControlPanel } from "./DeviceControlPanel";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { GmailAlertNotifier } from "./GmailAlertNotifier";
 import { MetricCard } from "./MetricCard";
 import { SettingsView } from "./SettingsView";
 import { TelemetryHistoryView } from "./TelemetryHistoryView";
@@ -93,6 +94,14 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
             tone={connection.tone}
           />
           <StatusPill label={t(`mode.${mode}`, { ns: "common" })} tone="info" />
+          <GmailAlertNotifier
+            alerts={dashboard.alerts}
+            clientId={import.meta.env.VITE_GOOGLE_GMAIL_CLIENT_ID}
+            pondId={session.user.pondId}
+            pondName={pondName}
+            recipientEmail={session.user.email}
+            userId={session.user.uid}
+          />
           <LanguageSwitcher />
           <UserMenu
             displayName={session.user.displayName}

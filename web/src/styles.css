@@ -315,6 +315,36 @@ button:disabled {
   background: rgb(255 255 255 / 3%);
 }
 
+.gmail-alert-button {
+  display: inline-flex;
+  min-height: 36px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  background: rgb(255 255 255 / 3%);
+  font-size: var(--type-button);
+  font-weight: 650;
+}
+
+.gmail-alert-button svg { width: 16px; height: 16px; }
+.gmail-alert-button:not(:disabled) { cursor: pointer; }
+.gmail-alert-button:not(:disabled):hover,
+.gmail-alert-button:not(:disabled):focus-visible,
+.gmail-alert-button--connected {
+  border-color: rgb(var(--rgb-normal) / 45%);
+  color: var(--color-normal);
+  background: rgb(var(--rgb-normal) / 10%);
+}
+.gmail-alert-button--sendError,
+.gmail-alert-button--authorizationError {
+  border-color: rgb(var(--rgb-critical) / 45%);
+  color: var(--color-critical);
+}
+
 .language-switcher__option {
   --circle-size: 32px;
   display: grid;

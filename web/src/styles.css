@@ -1802,6 +1802,63 @@ button:disabled {
   font-size: var(--type-caption);
 }
 
+.simulation-controls {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-block: 1px solid var(--color-border);
+  background: rgb(var(--rgb-info) / 5%);
+}
+
+.simulation-controls__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.simulation-controls__heading > svg {
+  width: 20px;
+  color: var(--color-info);
+}
+
+.simulation-controls__heading > div {
+  display: grid;
+  gap: 0.1rem;
+  margin-right: auto;
+}
+
+.simulation-controls__heading .eyebrow {
+  margin: 0;
+}
+
+.simulation-controls__heading strong,
+.simulation-controls__status {
+  font-size: var(--type-caption);
+}
+
+.simulation-controls .scenario-buttons {
+  justify-content: flex-start;
+}
+
+.scenario-button svg {
+  width: 12px;
+}
+
+.scenario-button--stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.simulation-controls__status {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.simulation-controls__status--error {
+  color: var(--color-critical);
+}
+
 .record-resolve-action {
   display: grid;
   gap: 0.4rem;

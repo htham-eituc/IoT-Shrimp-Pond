@@ -48,6 +48,9 @@ String activeAlertKeyFor(const SensorReadings &sensors, const String &status) {
   if (sensors.rain && sensors.waterLevel > 80) {
     return "warning-rain-overflow";
   }
+  if (sensors.temperature > 35.0f && sensors.salinity > 35.0f) {
+    return "heat-salinity";
+  }
   if (sensors.temperature > 33.0f) {
     return "warning-temperature";
   }
@@ -76,6 +79,9 @@ String alertMessageFor(const String &alertKey) {
   }
   if (alertKey == "warning-temperature") {
     return "Water temperature is above the safe range.";
+  }
+  if (alertKey == "heat-salinity") {
+    return "Water temperature and salinity are critically high.";
   }
   if (alertKey == "critical-ph") {
     return "pH is critically outside the safe range.";

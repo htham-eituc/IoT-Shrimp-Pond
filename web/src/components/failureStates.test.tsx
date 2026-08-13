@@ -65,7 +65,7 @@ describe("localized operational failure and empty states", () => {
   it.each([
     ["vi", "thời điểm cập nhật cuối đã quá 30 giây"],
     ["en", "last-seen timestamp is older than 30 seconds"],
-  ] as const)("renders stale telemetry and localized data-source errors in %s", async (locale, staleText) => {
+  ] as const)("does not show stale telemetry messaging for a connected controller in %s", async (locale, staleText) => {
     await setLocale(locale, null);
     const database = createMockPondDatabase();
     const source = new MockPondDataSource(TEST_FARMER_ACCESS, database);
@@ -78,12 +78,12 @@ describe("localized operational failure and empty states", () => {
         alerts={[]}
         commands={[]}
         telemetry={[]}
-        connectionState="stale"
+        connectionState="online"
         onOpenDetail={() => undefined}
       />,
     );
 
-    expect(markup).toContain(staleText);
+    expect(markup).not.toContain(staleText);
     expect(i18n.t("firebaseUnavailable", { ns: "dashboard" })).not.toMatch(/^dashboard[.:]/);
     expect(i18n.t("firebaseUnavailableDescription", { ns: "dashboard", reason: i18n.t("pondSubscribe", { ns: "errors" }) })).not.toMatch(/dashboard[.:]|errors[.:]/);
     source.dispose();

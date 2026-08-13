@@ -9,7 +9,7 @@ import type {
   PondState,
   TelemetryRecord,
 } from "../domain";
-import type { CreateCommandRequest, PondAccessContext, PondDataSource, SubscriptionCallback, TelemetryQueryOptions, Unsubscribe } from "./PondDataSource";
+import type { CreateCommandRequest, PondAccessContext, PondDataSource, SimulationControl, SimulationScenario, SimulationSnapshot, SubscriptionCallback, TelemetryQueryOptions, Unsubscribe } from "./PondDataSource";
 import { MockIoTController, type DemoScenario, type DemoScenarioState } from "./MockIoTController";
 import { createMockPondDatabase } from "./mockDatabase";
 
@@ -20,6 +20,10 @@ export class MockPondDataSource implements PondDataSource {
   private readonly controller: MockIoTController;
   private readonly listeners = new Set<() => void>();
   private commandSequence = 1;
+  private simulation: SimulationSnapshot = {
+    control: { enabled: false, scenario: "normal", requestId: "initial", requestedAtMs: 0 },
+    state: { active: false, scenario: "normal", requestId: "initial", startedAtMs: 0, updatedAtMs: 0 },
+  };
 
   constructor(
     private readonly access: PondAccessContext,
@@ -48,6 +52,14 @@ export class MockPondDataSource implements PondDataSource {
 
   subscribeCommands(pondId: string, callback: SubscriptionCallback<Array<KeyedRecord<Command>>>): Unsubscribe {
     return this.subscribe("commands", pondId, () => callback(this.snapshotRecordList(this.database.commands[pondId] ?? {})));
+  }
+
+  subscribeSimulation(pondId: string, callback: SubscriptionCallback<SimulationSnapshot>): Unsubscribe {
+    this.assertFarmerForPond(pondId);
+    callback(clone(this.simulation));
+    const listener = () => callback(clone(this.simulation));
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   async getTelemetry(pondId: string, queryOptions: TelemetryQueryOptions = {}): Promise<Array<KeyedRecord<TelemetryRecord>>> {
@@ -131,6 +143,23 @@ export class MockPondDataSource implements PondDataSource {
     alert.status = "resolved";
     alert.resolvedAtMs = resolvedAtMs;
     this.emit();
+  }
+
+  async requestSimulation(
+    pondId: string,
+    scenario: Exclude<SimulationScenario, "normal"> | null,
+  ): Promise<SimulationControl> {
+    this.assertFarmerForPond(pondId);
+    const requestedAtMs = this.now();
+    const control: SimulationControl = {
+      enabled: scenario !== null,
+      scenario: scenario ?? "normal",
+      requestId: `sim-${requestedAtMs}-${this.commandSequence++}`,
+      requestedAtMs,
+    };
+    this.simulation.control = control;
+    this.emit();
+    return clone(control);
   }
 
   setDemoScenario(pondId: string, scenario: DemoScenario): void {

@@ -64,7 +64,7 @@ void loop() {
   }
   lastUploadMs = now;
 
-  SensorReadings sensors = readSensors(simulation);
+  SensorReadings sensors = readSensors(simulation, currentDevices);
   String status = statusFor(sensors);
 
   if (currentMode == "automatic") {

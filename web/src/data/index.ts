@@ -10,6 +10,10 @@ export type {
   PondDataSource,
   SubscriptionCallback,
   SubscriptionErrorCallback,
+  SimulationControl,
+  SimulationScenario,
+  SimulationSnapshot,
+  SimulationState,
   TelemetryQueryOptions,
   Unsubscribe,
 } from "./PondDataSource";

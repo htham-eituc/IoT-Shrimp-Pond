@@ -25,6 +25,7 @@ import { MetricCard } from "./MetricCard";
 import { Pond3DVisualization } from "./Pond3D";
 import { createPondProbeReadings } from "./Pond3D/pondSceneModel";
 import { StatusBadge } from "./StatusBadge";
+import { SimulationControls } from "./SimulationControls";
 
 export type DetailView = "realtime" | "control" | "history" | "settings" | "alerts";
 
@@ -97,6 +98,13 @@ export function CommandCenterView({
           </div>
         </header>
 
+        <SimulationControls
+          dataSource={dataSource}
+          pondId={pondId}
+          mode={settings?.mode ?? null}
+          connected={pond.connected}
+        />
+
         <div className="command-center__visualization">
           <Pond3DVisualization
             pond={pond}
@@ -105,10 +113,10 @@ export function CommandCenterView({
             onSelectDevice={focusDevice}
             onShowAlerts={() => onOpenDetail("alerts")}
           />
-          {connectionState !== "online" && (
+          {connectionState === "offline" && (
             <div className={`command-connection-overlay command-connection-overlay--${connectionState}`} role="status">
               <strong>{t(`connection.${connectionState}`, { ns: "common" })}</strong>
-              <span>{t(connectionState === "offline" ? "overview.disconnectedDescription" : "overview.staleDescription", { ns: "dashboard" })}</span>
+              <span>{t("overview.disconnectedDescription", { ns: "dashboard" })}</span>
             </div>
           )}
         </div>

@@ -1,12 +1,13 @@
 #include "automation.h"
 
 String statusFor(const SensorReadings &sensors) {
-  if (sensors.dissolvedOxygen < 3.5f || sensors.waterLevel > 90 || sensors.ph < 6.8f || sensors.ph > 9.0f) {
+  if (sensors.dissolvedOxygen < 3.5f || sensors.waterLevel > 90 || sensors.ph < 6.8f || sensors.ph > 9.0f ||
+      (sensors.temperature > 35.0f && sensors.salinity > 35.0f)) {
     return "critical";
   }
 
   if (sensors.dissolvedOxygen < 4.5f || sensors.waterLevel > 80 || sensors.rain ||
-      sensors.temperature > 33.0f || sensors.ph < 7.2f || sensors.ph > 8.8f) {
+      sensors.temperature > 33.0f || sensors.salinity > 30.0f || sensors.ph < 7.2f || sensors.ph > 8.8f) {
     return "warning";
   }
 

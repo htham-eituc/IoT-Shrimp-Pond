@@ -760,14 +760,14 @@ Controls sensor simulation scenarios and stores the simulation state reported by
 {
   "control": {
     "enabled": true,
-    "scenario": "rain",
+    "scenario": "rain_overflow",
     "requestId": "sim-001",
     "requestedAtMs": 1786200200000
   },
 
   "state": {
     "active": true,
-    "scenario": "rain",
+    "scenario": "rain_overflow",
     "requestId": "sim-001",
     "startedAtMs": 1786200201000,
     "updatedAtMs": 1786200205000
@@ -777,7 +777,7 @@ Controls sensor simulation scenarios and stores the simulation state reported by
 
 ### Supported scenarios
 
-`normal`, `rain`, `hypoxia`, `heat_salinity`.
+`normal`, `rain_overflow`, `hypoxia`, `heat_salinity`.
 
 ### Write ownership
 
@@ -787,6 +787,17 @@ Controls sensor simulation scenarios and stores the simulation state reported by
 | `state`   | Device |
 
 The farmer requests a scenario through `control`. The device reads the request, simulates the corresponding sensor behavior, writes the resulting values to `/ponds/{pondId}/sensors`, and reports the active simulation through `state`.
+
+Simulation values ramp from the current physical readings toward the scenario
+target over multiple sensor uploads. This allows warning and critical thresholds
+to be crossed progressively so actuator responses can be observed in Wokwi and
+on the dashboard instead of all values changing in one update.
+
+During a simulation, device outputs feed back into the simulated environment:
+the aerator raises dissolved oxygen, the drainage pump lowers water level, the
+dilution pump lowers temperature/conductivity/salinity, and feeding has a small
+oxygen cost. Scenario pressure remains stronger than these corrections so the
+full warning and critical workflow can still be demonstrated.
 
 ---
 

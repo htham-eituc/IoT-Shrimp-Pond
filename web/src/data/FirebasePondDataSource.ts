@@ -31,6 +31,9 @@ import type {
   SubscriptionCallback,
   SubscriptionErrorCallback,
   PondAccessContext,
+  SimulationControl,
+  SimulationScenario,
+  SimulationSnapshot,
   TelemetryQueryOptions,
   Unsubscribe,
 } from "./PondDataSource";
@@ -194,6 +197,19 @@ export class FirebasePondDataSource implements PondDataSource {
     return { id: commandRef.key, value: command };
   }
 
+  subscribeSimulation(
+    pondId: string,
+    callback: SubscriptionCallback<SimulationSnapshot>,
+    onError?: SubscriptionErrorCallback,
+  ): Unsubscribe {
+    this.assertFarmerForPond(pondId);
+    return onValue(
+      ref(this.database, `simulation/${pondId}`),
+      (snapshot) => deliver(() => parseSimulationSnapshot(snapshot.val()), callback, onError),
+      (error) => onError?.(toError(error)),
+    );
+  }
+
   async resolveAlert(pondId: string, alertId: string, resolvedAtMs = Date.now()): Promise<void> {
     this.assertFarmerForPond(pondId);
     if (!alertId || alertId.includes("/") || !Number.isFinite(resolvedAtMs) || resolvedAtMs < 0) {
@@ -205,11 +221,85 @@ export class FirebasePondDataSource implements PondDataSource {
     });
   }
 
+  async requestSimulation(
+    pondId: string,
+    scenario: Exclude<SimulationScenario, "normal"> | null,
+  ): Promise<SimulationControl> {
+    this.assertFarmerForPond(pondId);
+    const control: SimulationControl = {
+      enabled: scenario !== null,
+      scenario: scenario ?? "normal",
+      requestId: `sim-${Date.now()}-${crypto.randomUUID()}`,
+      requestedAtMs: Date.now(),
+    };
+    await set(ref(this.database, `simulation/${pondId}/control`), control);
+    return control;
+  }
+
   private assertFarmerForPond(pondId: string): void {
     if (this.access.profile.role !== "farmer" || this.access.profile.pondId !== pondId) {
       throw new Error(`Current user cannot access pond ${pondId}.`);
     }
   }
+}
+
+const SIMULATION_SCENARIOS: readonly SimulationScenario[] = ["normal", "rain_overflow", "hypoxia", "heat_salinity"];
+
+function parseSimulationSnapshot(value: unknown): SimulationSnapshot {
+  if (value === null || value === undefined) return { control: null, state: null };
+  const root = readRecord(value, "simulation");
+  return {
+    control: root.control === undefined ? null : parseSimulationControl(root.control),
+    state: root.state === undefined ? null : parseSimulationState(root.state),
+  };
+}
+
+function parseSimulationControl(value: unknown): SimulationControl {
+  const record = readRecord(value, "simulation.control");
+  return {
+    enabled: readBoolean(record.enabled, "simulation.control.enabled"),
+    scenario: readScenario(record.scenario, "simulation.control.scenario"),
+    requestId: readString(record.requestId, "simulation.control.requestId"),
+    requestedAtMs: readTimestamp(record.requestedAtMs, "simulation.control.requestedAtMs"),
+  };
+}
+
+function parseSimulationState(value: unknown): SimulationSnapshot["state"] {
+  const record = readRecord(value, "simulation.state");
+  return {
+    active: readBoolean(record.active, "simulation.state.active"),
+    scenario: readScenario(record.scenario, "simulation.state.scenario"),
+    requestId: readString(record.requestId, "simulation.state.requestId"),
+    startedAtMs: readTimestamp(record.startedAtMs, "simulation.state.startedAtMs"),
+    updatedAtMs: readTimestamp(record.updatedAtMs, "simulation.state.updatedAtMs"),
+  };
+}
+
+function readRecord(value: unknown, path: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`${path} must be an object.`);
+  return value as Record<string, unknown>;
+}
+
+function readBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== "boolean") throw new Error(`${path} must be a boolean.`);
+  return value;
+}
+
+function readString(value: unknown, path: string): string {
+  if (typeof value !== "string" || value.length === 0) throw new Error(`${path} must be a non-empty string.`);
+  return value;
+}
+
+function readTimestamp(value: unknown, path: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error(`${path} must be a nonnegative number.`);
+  return value;
+}
+
+function readScenario(value: unknown, path: string): SimulationScenario {
+  if (typeof value !== "string" || !SIMULATION_SCENARIOS.includes(value as SimulationScenario)) {
+    throw new Error(`${path} contains an unsupported scenario.`);
+  }
+  return value as SimulationScenario;
 }
 
 function mergePondSettings(current: PondSettings, changes: DeepPartial<PondSettings>): PondSettings {

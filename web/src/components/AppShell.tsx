@@ -62,7 +62,7 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
   const pondName = dashboard.pond?.name ?? session.pond.name;
   const connected = dashboard.pond?.connected ?? session.pond.connected;
   const lastSeenMs = dashboard.pond?.lastSeenMs ?? null;
-  const connection = getConnectionPresentation(connected, lastSeenMs ?? 0, currentTimeMs);
+  const connection = getConnectionPresentation(connected);
   const mode = dashboard.settings?.mode ?? session.pond.mode;
   const lastSeenText = lastSeenMs === null
     ? t("unavailable", { ns: "common" })
@@ -118,7 +118,6 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
             pondId={session.user.pondId}
             onOpenDetail={openDetail}
             dashboard={dashboard}
-            currentTimeMs={currentTimeMs}
           />
         </div>
       </main>
@@ -159,13 +158,11 @@ function DashboardContent({
   pondId,
   onOpenDetail,
   dashboard,
-  currentTimeMs,
 }: {
   dataSource: PondDataSource;
   pondId: string;
   onOpenDetail(view: DetailView): void;
   dashboard: ReturnType<typeof usePondDashboard>;
-  currentTimeMs: number | null;
 }) {
   const { t } = useTranslation(["common", "dashboard", "errors"]);
 
@@ -186,7 +183,7 @@ function DashboardContent({
     return <StatePanel title={t("noPondData", { ns: "dashboard" })} description={t("noPondDescription", { ns: "dashboard" })} tone="warning" />;
   }
 
-  const connection = getConnectionPresentation(dashboard.pond.connected, dashboard.pond.lastSeenMs, currentTimeMs);
+  const connection = getConnectionPresentation(dashboard.pond.connected);
   return (
     <CommandCenterView
       dataSource={dataSource}

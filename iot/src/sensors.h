@@ -2,4 +2,4 @@
 
 #include "types.h"
 
-SensorReadings readSensors(const SimulationControl &simulation, const DeviceState &devices);
+SensorReadings readSensors(const SimulationControl &simulation);

@@ -32,3 +32,8 @@ constexpr unsigned long COMMAND_CHECK_INTERVAL_MS = 2000;
 constexpr unsigned long SETTINGS_REFRESH_INTERVAL_MS = 10000;
 constexpr unsigned long SIMULATION_REFRESH_INTERVAL_MS = 2000;
 constexpr unsigned long LCD_REFRESH_INTERVAL_MS = 1000;
+
+// Fraction of the remaining distance moved toward a simulation target on each
+// sensor upload. Use a smaller value for a slower transition or a larger value
+// for a faster transition. Valid range: 0.01f to 1.0f.
+constexpr float SIMULATION_ALPHA = 0.75f;

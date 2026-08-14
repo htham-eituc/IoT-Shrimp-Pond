@@ -4,18 +4,23 @@
   "editor": "wokwi",
   "parts": [
     { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
-    { "type": "wokwi-potentiometer", "id": "potPh", "top": -130, "left": -220, "attrs": { "value": "600" } },
-    { "type": "wokwi-potentiometer", "id": "potDo", "top": -40, "left": -220, "attrs": { "value": "786" } },
-    { "type": "wokwi-potentiometer", "id": "potTemp", "top": 50, "left": -220, "attrs": { "value": "500" } },
-    { "type": "wokwi-potentiometer", "id": "potLevel", "top": 140, "left": -220, "attrs": { "value": "800" } },
-    { "type": "wokwi-potentiometer", "id": "potEc", "top": 230, "left": -220, "attrs": { "value": "600" } },
-    { "type": "wokwi-slide-switch", "id": "rainSwitch", "top": 325, "left": -208, "attrs": { "value": "0" } },
+    { "type": "wokwi-potentiometer", "id": "potPh", "top": -130, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-potentiometer", "id": "potDo", "top": -40, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-potentiometer", "id": "potTemp", "top": 50, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-potentiometer", "id": "potLevel", "top": 140, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-potentiometer", "id": "potSalinity", "top": 230, "left": -220, "attrs": { "value": "50" } },
+    { "type": "wokwi-slide-switch", "id": "rainSwitch", "top": 325, "left": -208, "attrs": {} },
     { "type": "wokwi-led", "id": "ledAerator", "top": -120, "left": 220, "attrs": { "color": "green", "label": "Aerator" } },
     { "type": "wokwi-led", "id": "ledDrainage", "top": -60, "left": 220, "attrs": { "color": "blue", "label": "Drainage" } },
     { "type": "wokwi-led", "id": "ledDilution", "top": 0, "left": 220, "attrs": { "color": "cyan", "label": "Dilution" } },
     { "type": "wokwi-led", "id": "ledFeeder", "top": 60, "left": 220, "attrs": { "color": "yellow", "label": "Feeder" } },
     { "type": "wokwi-led", "id": "ledBuzzer", "top": 120, "left": 220, "attrs": { "color": "red", "label": "Buzzer" } },
-    { "type": "wokwi-led", "id": "ledBeacon", "top": 180, "left": 220, "attrs": { "color": "orange", "label": "Warning" } }
+    { "type": "wokwi-led", "id": "ledBeacon", "top": 180, "left": 220, "attrs": { "color": "orange", "label": "Warning" } },
+    { "type": "wokwi-led", "id": "ledStatusOk", "top": -150, "left": 340, "attrs": { "color": "green", "label": "OK" } },
+    { "type": "wokwi-led", "id": "ledStatusWarn", "top": -90, "left": 340, "attrs": { "color": "yellow", "label": "WARN" } },
+    { "type": "wokwi-led", "id": "ledStatusCrit", "top": -30, "left": 340, "attrs": { "color": "red", "label": "CRIT" } },
+    { "type": "wokwi-lcd1602", "id": "lcdSensors", "top": 260, "left": 150, "attrs": { "pins": "i2c", "i2cAddress": "0x27" } },
+    { "type": "wokwi-lcd1602", "id": "lcdStatus", "top": 360, "left": 150, "attrs": { "pins": "i2c", "i2cAddress": "0x3F" } }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
@@ -37,9 +42,9 @@
     [ "potLevel:VCC", "esp:3V3", "red", [] ],
     [ "potLevel:SIG", "esp:33", "green", [] ],
 
-    [ "potEc:GND", "esp:GND.1", "black", [] ],
-    [ "potEc:VCC", "esp:3V3", "red", [] ],
-    [ "potEc:SIG", "esp:VP", "green", [] ],
+    [ "potSalinity:GND", "esp:GND.1", "black", [] ],
+    [ "potSalinity:VCC", "esp:3V3", "red", [] ],
+    [ "potSalinity:SIG", "esp:36", "green", [] ],
 
     [ "rainSwitch:1", "esp:GND.1", "black", [] ],
     [ "rainSwitch:2", "esp:25", "green", [] ],
@@ -55,7 +60,24 @@
     [ "ledBuzzer:A", "esp:21", "red", [] ],
     [ "ledBuzzer:C", "esp:GND.2", "black", [] ],
     [ "ledBeacon:A", "esp:22", "orange", [] ],
-    [ "ledBeacon:C", "esp:GND.2", "black", [] ]
+    [ "ledBeacon:C", "esp:GND.2", "black", [] ],
+
+    [ "ledStatusOk:A", "esp:13", "green", [] ],
+    [ "ledStatusOk:C", "esp:GND.2", "black", [] ],
+    [ "ledStatusWarn:A", "esp:14", "yellow", [] ],
+    [ "ledStatusWarn:C", "esp:GND.2", "black", [] ],
+    [ "ledStatusCrit:A", "esp:15", "red", [] ],
+    [ "ledStatusCrit:C", "esp:GND.2", "black", [] ],
+
+    [ "lcdSensors:GND", "esp:GND.2", "black", [] ],
+    [ "lcdSensors:VCC", "esp:5V", "red", [] ],
+    [ "lcdSensors:SDA", "esp:26", "green", [] ],
+    [ "lcdSensors:SCL", "esp:27", "blue", [] ],
+
+    [ "lcdStatus:GND", "esp:GND.2", "black", [] ],
+    [ "lcdStatus:VCC", "esp:5V", "red", [] ],
+    [ "lcdStatus:SDA", "esp:26", "green", [] ],
+    [ "lcdStatus:SCL", "esp:27", "blue", [] ]
   ],
   "serialMonitor": {
     "display": "terminal"

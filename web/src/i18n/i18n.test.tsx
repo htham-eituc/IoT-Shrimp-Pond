@@ -31,8 +31,8 @@ describe("application localization", () => {
 
     expect(login).toContain("Đăng nhập");
     expect(login).toContain("Mật khẩu");
-    expect(shell).toContain("Ao hiện tại");
-    expect(shell).toContain("Tự động");
+    expect(shell).not.toContain("Ao hiện tại");
+    expect(shell).not.toContain("Tự động");
     expect(shell).toContain("Đang kết nối với ao nuôi…");
     expect(`${login}${shell}`).not.toMatch(/(?:common|auth|dashboard|errors):[\w.]+/);
     source.dispose();
@@ -51,8 +51,8 @@ describe("application localization", () => {
 
     expect(login).toContain("Sign in");
     expect(login).toContain("Password");
-    expect(shell).toContain("Current pond");
-    expect(shell).toContain("Automatic");
+    expect(shell).not.toContain("Current pond");
+    expect(shell).not.toContain("Automatic");
     expect(shell).toContain("Connecting to pond…");
     expect(`${login}${shell}`).not.toMatch(/(?:common|auth|dashboard|errors):[\w.]+/);
     source.dispose();

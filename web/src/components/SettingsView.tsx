@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { CloudRain, RotateCcw, Save, Settings2 } from "lucide-react";
+import { CloudRain, Moon, RotateCcw, Save, Settings2, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OperatingMode, PondSettings } from "../domain";
 import type { PondDataSource } from "../data";
 import { translateError } from "../i18n";
 import { validatePondSettings, type SettingsValidationError, type SettingsValidationErrors } from "../settings/settingsValidation";
 import { ConfirmationDialog } from "./ConfirmationDialog";
+import type { Theme } from "../theme";
 
 interface NumberFieldDefinition {
   key: string;
@@ -63,9 +64,11 @@ interface SettingsViewProps {
   pondId: string;
   settings: PondSettings;
   onDirtyChange?(dirty: boolean): void;
+  theme?: Theme;
+  onThemeChange?(theme: Theme): void;
 }
 
-export function SettingsView({ dataSource, pondId, settings, onDirtyChange }: SettingsViewProps) {
+export function SettingsView({ dataSource, pondId, settings, onDirtyChange, theme = "dark", onThemeChange }: SettingsViewProps) {
   const { t } = useTranslation(["common", "settings", "errors"]);
   const [baseline, setBaseline] = useState(settings);
   const [formRevision, setFormRevision] = useState(0);
@@ -141,6 +144,22 @@ export function SettingsView({ dataSource, pondId, settings, onDirtyChange }: Se
           <p>{t("rainBooleanDescription", { ns: "settings" })}</p>
         </div>
       </aside>
+
+      <section className="appearance-panel" aria-labelledby="appearance-title">
+        <div>
+          <span className="eyebrow">{t("appearance.eyebrow", { ns: "settings" })}</span>
+          <h2 id="appearance-title">{t("appearance.title", { ns: "settings" })}</h2>
+          <p>{t("appearance.description", { ns: "settings" })}</p>
+        </div>
+        <div className="theme-switcher" role="group" aria-label={t("appearance.title", { ns: "settings" })}>
+          <button className={theme === "light" ? "theme-option theme-option--active" : "theme-option"} type="button" aria-pressed={theme === "light"} onClick={() => onThemeChange?.("light")}>
+            <Sun aria-hidden="true" /> {t("appearance.light", { ns: "settings" })}
+          </button>
+          <button className={theme === "dark" ? "theme-option theme-option--active" : "theme-option"} type="button" aria-pressed={theme === "dark"} onClick={() => onThemeChange?.("dark")}>
+            <Moon aria-hidden="true" /> {t("appearance.dark", { ns: "settings" })}
+          </button>
+        </div>
+      </section>
 
       <form key={formRevision} className="settings-form" onSubmit={(event) => void submit(event)} onReset={resetDraft} onChange={markDirty} noValidate>
         {Object.keys(errors).length > 0 && (

@@ -248,6 +248,13 @@ export const vi = {
     title: "Ngưỡng và tự động hóa",
     description: "Các giá trị này ánh xạ trực tiếp đến hợp đồng cài đặt Firebase và được bộ điều khiển IoT đọc.",
     mode: "Chế độ: {{mode}}",
+    appearance: {
+      eyebrow: "Giao diện",
+      title: "Chủ đề bảng điều khiển",
+      description: "Chọn chủ đề màu trên thiết bị này. Tùy chọn của bạn được lưu tự động.",
+      light: "Sáng",
+      dark: "Tối",
+    },
     rainBooleanTitle: "Mưa sử dụng giá trị giao thức dạng boolean.",
     rainBooleanDescription: "Firebase không định nghĩa ngưỡng cường độ mưa, vì vậy biểu mẫu này không tạo thêm ngưỡng đó.",
     invalidFields_one: "Hãy kiểm tra {{count}} trường không hợp lệ.",

@@ -246,6 +246,13 @@ export const en = {
     title: "Thresholds and automation",
     description: "These values map directly to the Firebase settings contract and are read by the IoT controller.",
     mode: "Mode: {{mode}}",
+    appearance: {
+      eyebrow: "Appearance",
+      title: "Dashboard theme",
+      description: "Choose the color theme used on this device. Your preference is saved automatically.",
+      light: "Light",
+      dark: "Dark",
+    },
     rainBooleanTitle: "Rain uses a boolean protocol value.",
     rainBooleanDescription: "There is no rainfall-rate threshold in Firebase, so this form does not create one.",
     invalidFields_one: "Review {{count}} invalid field.",

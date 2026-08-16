@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { CheckCircle2, Circle, LoaderCircle, LogOut, Waves } from "lucide-react";
+import { CheckCircle2, LoaderCircle, LogOut, Waves } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DashboardSession } from "../domain/session";
 import type { KeyedRecord, PondAlert, PondSettings, PondState, TelemetryRecord } from "../domain";
 import type { PondDataSource } from "../data";
 import { usePondDashboard } from "../hooks/usePondDashboard";
-import { useLocaleFormatters } from "../i18n/formatters";
 import { createMetricViewModels } from "../presentation/metrics";
 import { getConnectionPresentation } from "../presentation/connection";
 import { AlertsEventsView } from "./AlertsEventsView";
@@ -19,24 +18,25 @@ import { MetricCard } from "./MetricCard";
 import { SettingsView } from "./SettingsView";
 import { TelemetryHistoryView } from "./TelemetryHistoryView";
 import { UserMenu } from "./UserMenu";
+import type { Theme } from "../theme";
 
 interface AppShellProps {
   dataSource: PondDataSource;
   session: DashboardSession;
   showWelcome: boolean;
   onLogout(): Promise<void>;
+  theme?: Theme;
+  onThemeChange?(theme: Theme): void;
 }
 
-export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShellProps) {
+export function AppShell({ dataSource, session, showWelcome, onLogout, theme = "dark", onThemeChange = () => undefined }: AppShellProps) {
   const { t } = useTranslation(["common", "dashboard", "auth"]);
-  const formatters = useLocaleFormatters();
   const [detailView, setDetailView] = useState<DetailView | null>(null);
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
   const dashboard = usePondDashboard(dataSource, session.user.pondId);
-  const currentTimeMs = useCurrentTimeMs();
   const closeDetail = useCallback(() => {
     setDetailView(null);
     setSettingsDirty(false);
@@ -61,15 +61,6 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
   }
 
   const pondName = dashboard.pond?.name ?? session.pond.name;
-  const connected = dashboard.pond?.connected ?? session.pond.connected;
-  const lastSeenMs = dashboard.pond?.lastSeenMs ?? null;
-  const connection = getConnectionPresentation(connected);
-  const mode = dashboard.settings?.mode ?? session.pond.mode;
-  const lastSeenText = lastSeenMs === null
-    ? t("unavailable", { ns: "common" })
-    : currentTimeMs === null
-      ? formatters.timestamp(lastSeenMs)
-      : formatters.relativeTime(lastSeenMs, currentTimeMs);
 
   return (
     <div className="app-shell app-shell--command-center">
@@ -82,18 +73,7 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
           </span>
         </a>
 
-        <div className="topbar-context topbar-context--command-center" aria-label={t("currentPondContext", { ns: "dashboard" })}>
-          <PondIdentity name={pondName} />
-          <StatusPill
-            label={dashboard.pond ? t(`status.${dashboard.pond.status}`, { ns: "common" }) : t("unavailable", { ns: "common" })}
-            tone={dashboard.pond?.status ?? "offline"}
-          />
-          <StatusPill
-            label={t(`connection.${connection.state}`, { ns: "common" })}
-            helper={t("lastSeenHeader", { ns: "dashboard", time: lastSeenText })}
-            tone={connection.tone}
-          />
-          <StatusPill label={t(`mode.${mode}`, { ns: "common" })} tone="info" />
+        <div className="topbar-context topbar-context--command-center">
           <GmailAlertNotifier
             alerts={dashboard.alerts}
             clientId={import.meta.env.VITE_GOOGLE_GMAIL_CLIENT_ID}
@@ -143,6 +123,8 @@ export function AppShell({ dataSource, session, showWelcome, onLogout }: AppShel
             pondId={session.user.pondId}
             dashboard={dashboard}
             onSettingsDirtyChange={setSettingsDirty}
+            theme={theme}
+            onThemeChange={onThemeChange}
           />
         </DetailDrawer>
       )}
@@ -214,12 +196,16 @@ function DetailContent({
   pondId,
   dashboard,
   onSettingsDirtyChange,
+  theme,
+  onThemeChange,
 }: {
   view: DetailView;
   dataSource: PondDataSource;
   pondId: string;
   dashboard: ReturnType<typeof usePondDashboard>;
   onSettingsDirtyChange(dirty: boolean): void;
+  theme: Theme;
+  onThemeChange(theme: Theme): void;
 }) {
   const { t } = useTranslation("dashboard");
   const pond = dashboard.pond;
@@ -234,7 +220,7 @@ function DetailContent({
   if (!dashboard.settings) {
     return <StatePanel title={t("settingsUnavailable")} description={t(view === "control" ? "settingsRequiredForCommands" : "noSettingsDescription")} tone="warning" />;
   }
-  if (view === "settings") return <SettingsView dataSource={dataSource} pondId={pondId} settings={dashboard.settings} onDirtyChange={onSettingsDirtyChange} />;
+  if (view === "settings") return <SettingsView dataSource={dataSource} pondId={pondId} settings={dashboard.settings} onDirtyChange={onSettingsDirtyChange} theme={theme} onThemeChange={onThemeChange} />;
   return (
     <DeviceControlPanel
       dataSource={dataSource}
@@ -276,47 +262,6 @@ function RealtimeView({
       </div>
     </div>
   );
-}
-
-function PondIdentity({ name }: { name: string }) {
-  const { t } = useTranslation("dashboard");
-  return (
-    <div className="pond-identity">
-      <span className="eyebrow">{t("currentPond")}</span>
-      <strong>{name}</strong>
-    </div>
-  );
-}
-
-function StatusPill({
-  label,
-  helper,
-  tone,
-}: {
-  label: string;
-  helper?: string;
-  tone: "normal" | "warning" | "critical" | "info" | "offline";
-}) {
-  return (
-    <span className={`status-pill status-pill--${tone}`}>
-      <Circle aria-hidden="true" />
-      <span>
-        <strong>{label}</strong>
-        {helper && <small>{helper}</small>}
-      </span>
-    </span>
-  );
-}
-
-function useCurrentTimeMs(): number | null {
-  const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
-  useEffect(() => {
-    const updateClock = () => setCurrentTimeMs(Date.now());
-    queueMicrotask(updateClock);
-    const timer = window.setInterval(updateClock, 5_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return currentTimeMs;
 }
 
 function PageHeading({ eyebrow, title, description, trailing }: { eyebrow: string; title: string; description: string; trailing?: ReactNode }) {

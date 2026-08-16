@@ -1402,6 +1402,66 @@ button:disabled {
   gap: 1rem;
 }
 
+.appearance-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.appearance-panel h2 {
+  margin: 0.2rem 0 0;
+  font: 700 var(--type-h3) var(--font-display);
+}
+
+.appearance-panel p {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-body-sm);
+}
+
+.theme-switcher {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-deep);
+}
+
+.theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: 7px;
+  color: var(--color-text-muted);
+  background: transparent;
+  font-size: var(--type-button);
+  font-weight: 700;
+}
+
+.theme-option svg { width: 16px; height: 16px; }
+.theme-option--active { color: var(--color-text); background: var(--color-surface); box-shadow: 0 2px 8px rgb(0 20 24 / 10%); }
+
+:root[data-theme="light"] .topbar { background: rgb(243 248 247 / 91%); }
+:root[data-theme="light"] .detail-drawer,
+:root[data-theme="light"] .user-menu__popover { background: rgb(255 255 255 / 96%); }
+:root[data-theme="light"] .detail-drawer-backdrop,
+:root[data-theme="light"] .dialog-backdrop { background: rgb(15 42 46 / 24%); }
+
+@media (max-width: 620px) {
+  .appearance-panel { align-items: stretch; flex-direction: column; }
+  .theme-switcher { align-self: flex-start; }
+}
+
 .settings-error-summary {
   padding: 0.8rem 1rem;
   border: 1px solid rgb(var(--rgb-critical) / 38%);

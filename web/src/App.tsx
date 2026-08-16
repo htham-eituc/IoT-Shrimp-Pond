@@ -6,6 +6,7 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { LoginScreen } from "./components/LoginScreen";
 import { createPondDataSource } from "./data";
 import type { DashboardSession } from "./domain/session";
+import { useTheme } from "./theme";
 
 const authSource = getAuthSource();
 
@@ -19,6 +20,7 @@ export default function App() {
 
 function Application() {
   const auth = useAuth();
+  const { theme, setTheme } = useTheme();
   const view = resolveAuthenticatedApplicationView(auth.status, auth.session !== null);
 
   if (view === "loading") {
@@ -44,6 +46,8 @@ function Application() {
       session={auth.session}
       showWelcome={auth.entryKind === "interactive"}
       onLogout={auth.signOut}
+      theme={theme}
+      onThemeChange={setTheme}
     />
   );
 }
@@ -52,10 +56,14 @@ function AuthenticatedApplication({
   session,
   showWelcome,
   onLogout,
+  theme,
+  onThemeChange,
 }: {
   session: DashboardSession;
   showWelcome: boolean;
   onLogout(): Promise<void>;
+  theme: import("./theme").Theme;
+  onThemeChange(theme: import("./theme").Theme): void;
 }) {
   const dataSource = useMemo(
     () => createPondDataSource(import.meta.env, {
@@ -80,6 +88,8 @@ function AuthenticatedApplication({
       session={session}
       showWelcome={showWelcome}
       onLogout={onLogout}
+      theme={theme}
+      onThemeChange={onThemeChange}
     />
   );
 }

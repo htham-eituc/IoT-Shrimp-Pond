@@ -4,5 +4,5 @@
 
 #include "types.h"
 
-String statusFor(const SensorReadings &sensors);
-DeviceState automaticDevicesFor(const SensorReadings &sensors, const String &status);
+String statusFor(const SensorReadings &sensors, const PondSettings &settings);
+DeviceState automaticDevicesFor(const SensorReadings &sensors, const String &status, const PondSettings &settings);

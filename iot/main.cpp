@@ -18,6 +18,10 @@ unsigned long lastSimulationRefreshMs = 0;
 String currentMode = "automatic";
 DeviceState currentDevices = {false, false, false, false, false, false};
 SimulationControl simulation = {false, "normal", "initial"};
+PondSettings currentSettings = {
+  {{7.2f, 8.8f}, {5.0f, 4.5f, 3.5f, 5.5f}, {0.0f, 33.0f}, {0.0f, 30.0f}, {0.0f, 80.0f}},
+  {true, true, true},
+};
 
 void setup() {
   Serial.begin(115200);
@@ -38,7 +42,7 @@ void loop() {
   if (lastSettingsRefreshMs == 0 || now - lastSettingsRefreshMs >= SETTINGS_REFRESH_INTERVAL_MS) {
     lastSettingsRefreshMs = now;
     const String previousMode = currentMode;
-    refreshMode(currentMode);
+    refreshPondSettings(currentMode, currentSettings);
     if (previousMode != "manual" && currentMode == "manual") {
       stopSimulationOverride(simulation, "manual_mode");
     }
@@ -67,17 +71,17 @@ void loop() {
   lastUploadMs = now;
 
   SensorReadings sensors = readSensors(simulation);
-  String status = statusFor(sensors);
+  String status = statusFor(sensors, currentSettings);
   applyStatusIndicators(status);
 
   if (currentMode == "automatic") {
-    DeviceState nextDevices = automaticDevicesFor(sensors, status);
+    DeviceState nextDevices = automaticDevicesFor(sensors, status, currentSettings);
     const uint64_t timestampMs = currentTimestampMs();
     writeAutomaticDeviceChangeEvents(currentDevices, nextDevices, timestampMs);
     currentDevices = nextDevices;
     applyOutputs(currentDevices);
   }
 
-  uploadState(sensors, currentDevices, status, currentMode);
+  uploadState(sensors, currentDevices, status, currentMode, currentSettings);
   updateDisplays(sensors, currentDevices, status, currentMode, simulation);
 }

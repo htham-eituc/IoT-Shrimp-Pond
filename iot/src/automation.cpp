@@ -1,24 +1,33 @@
 #include "automation.h"
 
-String statusFor(const SensorReadings &sensors) {
-  if (sensors.dissolvedOxygen < 3.5f || sensors.waterLevel > 90 || sensors.ph < 6.8f || sensors.ph > 9.0f ||
-      (sensors.temperature > 35.0f && sensors.salinity > 35.0f)) {
+String statusFor(const SensorReadings &sensors, const PondSettings &settings) {
+  const ThresholdSettings &thresholds = settings.thresholds;
+
+  if (sensors.dissolvedOxygen < thresholds.dissolvedOxygen.critical) {
     return "critical";
   }
 
-  if (sensors.dissolvedOxygen < 4.5f || sensors.waterLevel > 80 || sensors.rain ||
-      sensors.temperature > 33.0f || sensors.salinity > 30.0f || sensors.ph < 7.2f || sensors.ph > 8.8f) {
+  if (sensors.dissolvedOxygen < thresholds.dissolvedOxygen.hypoxia ||
+      sensors.waterLevel > thresholds.waterLevel.warningHigh || sensors.rain ||
+      sensors.temperature < thresholds.temperature.warningLow || sensors.temperature > thresholds.temperature.warningHigh ||
+      sensors.salinity < thresholds.salinity.warningLow || sensors.salinity > thresholds.salinity.warningHigh ||
+      sensors.ph < thresholds.ph.warningLow || sensors.ph > thresholds.ph.warningHigh) {
     return "warning";
   }
 
   return "normal";
 }
 
-DeviceState automaticDevicesFor(const SensorReadings &sensors, const String &status) {
+DeviceState automaticDevicesFor(const SensorReadings &sensors, const String &status, const PondSettings &settings) {
   DeviceState devices;
-  devices.aerator = sensors.dissolvedOxygen < 5.0f;
-  devices.drainagePump = sensors.rain && sensors.waterLevel > 80;
-  devices.dilutionPump = sensors.temperature > 33.0f || sensors.salinity > 30.0f;
+  const ThresholdSettings &thresholds = settings.thresholds;
+  devices.aerator = settings.automation.hypoxiaResponseEnabled &&
+                    sensors.dissolvedOxygen < thresholds.dissolvedOxygen.normalMin;
+  devices.drainagePump = settings.automation.rainOverflowResponseEnabled && sensors.rain &&
+                         sensors.waterLevel > thresholds.waterLevel.warningHigh;
+  devices.dilutionPump = settings.automation.heatSalinityResponseEnabled &&
+                         (sensors.temperature > thresholds.temperature.warningHigh ||
+                          sensors.salinity > thresholds.salinity.warningHigh);
   devices.feeder = false;
   devices.buzzer = status == "critical";
   devices.warningBeacon = status != "normal";

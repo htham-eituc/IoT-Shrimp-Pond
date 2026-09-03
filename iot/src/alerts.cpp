@@ -31,35 +31,35 @@ String actionFor(bool isOn) {
   return isOn ? "on" : "off";
 }
 
-String activeAlertKeyFor(const SensorReadings &sensors, const String &status) {
+String activeAlertKeyFor(const SensorReadings &sensors, const String &status, const PondSettings &settings) {
   if (status == "normal") {
     return "";
   }
 
-  if (sensors.dissolvedOxygen < 3.5f) {
+  const ThresholdSettings &thresholds = settings.thresholds;
+
+  if (sensors.dissolvedOxygen < thresholds.dissolvedOxygen.critical) {
     return "critical-do";
   }
-  if (sensors.dissolvedOxygen < 4.5f) {
+  if (sensors.dissolvedOxygen < thresholds.dissolvedOxygen.hypoxia) {
     return "warning-do";
   }
-  if (sensors.waterLevel > 90) {
-    return "critical-water-level";
-  }
-  if (sensors.rain && sensors.waterLevel > 80) {
+  if (sensors.rain && sensors.waterLevel > thresholds.waterLevel.warningHigh) {
     return "warning-rain-overflow";
   }
-  if (sensors.temperature > 35.0f && sensors.salinity > 35.0f) {
+  if (sensors.temperature > thresholds.temperature.warningHigh && sensors.salinity > thresholds.salinity.warningHigh) {
     return "heat-salinity";
   }
-  if (sensors.temperature > 33.0f) {
+  if (sensors.temperature < thresholds.temperature.warningLow || sensors.temperature > thresholds.temperature.warningHigh) {
     return "warning-temperature";
   }
-  if (sensors.ph < 6.8f || sensors.ph > 9.0f) {
-    return "critical-ph";
+  if (sensors.salinity < thresholds.salinity.warningLow || sensors.salinity > thresholds.salinity.warningHigh) {
+    return "warning-salinity";
   }
-  if (sensors.ph < 7.2f || sensors.ph > 8.8f) {
+  if (sensors.ph < thresholds.ph.warningLow || sensors.ph > thresholds.ph.warningHigh) {
     return "warning-ph";
   }
+  if (sensors.waterLevel > thresholds.waterLevel.warningHigh) return "warning-water-level";
 
   return "warning-general";
 }
@@ -71,23 +71,23 @@ String alertMessageFor(const String &alertKey) {
   if (alertKey == "warning-do") {
     return "Dissolved oxygen is below the safe range.";
   }
-  if (alertKey == "critical-water-level") {
-    return "Water level is critically high.";
-  }
   if (alertKey == "warning-rain-overflow") {
     return "Rain and high water level may cause overflow.";
   }
   if (alertKey == "warning-temperature") {
-    return "Water temperature is above the safe range.";
+    return "Water temperature is outside the configured warning range.";
   }
   if (alertKey == "heat-salinity") {
-    return "Water temperature and salinity are critically high.";
+    return "Water temperature and salinity are above their configured warning thresholds.";
   }
-  if (alertKey == "critical-ph") {
-    return "pH is critically outside the safe range.";
+  if (alertKey == "warning-salinity") {
+    return "Salinity is outside the configured warning range.";
   }
   if (alertKey == "warning-ph") {
-    return "pH is outside the preferred range.";
+    return "pH is outside the configured warning range.";
+  }
+  if (alertKey == "warning-water-level") {
+    return "Water level is above the configured warning threshold.";
   }
 
   return "Pond conditions need attention.";
@@ -127,8 +127,8 @@ void writeAutomaticDeviceChangeEvents(const DeviceState &previousDevices, const 
   writeDeviceChangeEventIfNeeded("warningBeacon", previousDevices.warningBeacon, nextDevices.warningBeacon, "warning_or_critical_status", timestampMs);
 }
 
-void writeAlertIfChanged(const SensorReadings &sensors, const String &status, uint64_t timestampMs) {
-  const String alertKey = activeAlertKeyFor(sensors, status);
+void writeAlertIfChanged(const SensorReadings &sensors, const String &status, const PondSettings &settings, uint64_t timestampMs) {
+  const String alertKey = activeAlertKeyFor(sensors, status, settings);
 
   if (alertKey == lastAlertKey) {
     return;
@@ -160,7 +160,8 @@ void writeAlertIfChanged(const SensorReadings &sensors, const String &status, ui
   }
 }
 
-void uploadState(const SensorReadings &sensors, const DeviceState &devices, const String &status, const String &mode) {
+void uploadState(const SensorReadings &sensors, const DeviceState &devices, const String &status, const String &mode,
+                 const PondSettings &settings) {
   const uint64_t timestampMs = currentTimestampMs();
 
   FirebaseJson sensorsJson;
@@ -212,7 +213,7 @@ void uploadState(const SensorReadings &sensors, const DeviceState &devices, cons
     ok = false;
   }
 
-  writeAlertIfChanged(sensors, status, timestampMs);
+  writeAlertIfChanged(sensors, status, settings, timestampMs);
 
   Serial.printf(
       "Firebase upload %s | mode=%s status=%s ph=%.1f do=%.1f temp=%.1f level=%d rain=%s ec=%.1f salinity=%.1f\n",

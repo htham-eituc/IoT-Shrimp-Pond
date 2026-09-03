@@ -5,4 +5,5 @@
 #include "types.h"
 
 void refreshMode(String &currentMode);
+bool refreshPondSettings(String &currentMode, PondSettings &settings);
 void processPendingCommands(const String &currentMode, DeviceState &currentDevices);

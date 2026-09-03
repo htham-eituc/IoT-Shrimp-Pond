@@ -32,3 +32,34 @@ struct SimulationControl {
   String scenario;
   String requestId;
 };
+
+struct RangeThreshold {
+  float warningLow;
+  float warningHigh;
+};
+
+struct DissolvedOxygenThreshold {
+  float normalMin;
+  float hypoxia;
+  float critical;
+  float recovery;
+};
+
+struct ThresholdSettings {
+  RangeThreshold ph;
+  DissolvedOxygenThreshold dissolvedOxygen;
+  RangeThreshold temperature;
+  RangeThreshold salinity;
+  RangeThreshold waterLevel;
+};
+
+struct AutomationSettings {
+  bool hypoxiaResponseEnabled;
+  bool rainOverflowResponseEnabled;
+  bool heatSalinityResponseEnabled;
+};
+
+struct PondSettings {
+  ThresholdSettings thresholds;
+  AutomationSettings automation;
+};

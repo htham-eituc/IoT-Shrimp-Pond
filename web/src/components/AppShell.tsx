@@ -5,6 +5,7 @@ import type { DashboardSession } from "../domain/session";
 import type { KeyedRecord, PondAlert, PondSettings, PondState, TelemetryRecord } from "../domain";
 import type { PondDataSource } from "../data";
 import { usePondDashboard } from "../hooks/usePondDashboard";
+import { overlayMqttSensors, useMqttSensors } from "../mqtt/mqttSensors";
 import { createMetricViewModels } from "../presentation/metrics";
 import { getConnectionPresentation } from "../presentation/connection";
 import { AlertsEventsView } from "./AlertsEventsView";
@@ -37,6 +38,11 @@ export function AppShell({ dataSource, session, showWelcome, onLogout, theme = "
   const [loggingOut, setLoggingOut] = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
   const dashboard = usePondDashboard(dataSource, session.user.pondId);
+  const mqttSensors = useMqttSensors(session.user.pondId);
+  const liveDashboard = useMemo(
+    () => ({ ...dashboard, pond: overlayMqttSensors(dashboard.pond, mqttSensors) }),
+    [dashboard, mqttSensors],
+  );
   const closeDetail = useCallback(() => {
     setDetailView(null);
     setSettingsDirty(false);
@@ -106,12 +112,12 @@ export function AppShell({ dataSource, session, showWelcome, onLogout, theme = "
             dataSource={dataSource}
             pondId={session.user.pondId}
             onOpenDetail={openDetail}
-            dashboard={dashboard}
+            dashboard={liveDashboard}
           />
         </div>
       </main>
 
-      {detailView && dashboard.pond && (
+      {detailView && liveDashboard.pond && (
         <DetailDrawer
           title={t(`nav.${detailView}`, { ns: "dashboard" })}
           size={["history", "settings", "alerts"].includes(detailView) ? "wide" : "medium"}
@@ -121,7 +127,7 @@ export function AppShell({ dataSource, session, showWelcome, onLogout, theme = "
             view={detailView}
             dataSource={dataSource}
             pondId={session.user.pondId}
-            dashboard={dashboard}
+            dashboard={liveDashboard}
             onSettingsDirtyChange={setSettingsDirty}
             theme={theme}
             onThemeChange={onThemeChange}

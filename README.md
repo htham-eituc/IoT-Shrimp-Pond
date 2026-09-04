@@ -157,6 +157,35 @@ Device email/password
 pondId
 ```
 
+### Optional MQTT live sensor overlay
+
+Firebase remains the source of record for pond state, telemetry history,
+settings, commands, alerts, and events. When MQTT is configured, the ESP32
+also publishes the current sensor snapshot to:
+
+```text
+shrimp-pond/v1/ponds/{pondId}/sensors
+```
+
+Define the MQTT broker host and device credentials in ignored
+`iot/secrets.h`. Put the CA certificate in ignored `iot/mqtt_ca.h`, copied
+from `iot/mqtt_ca.example.h`. For a HiveMQ Serverless class/demo setup, use a
+dedicated subscribe-only dashboard credential in `web/.env`:
+
+```text
+VITE_MQTT_WSS_URL=wss://broker.example.com/mqtt
+VITE_MQTT_DASHBOARD_USERNAME=dashboard-read-only
+VITE_MQTT_DASHBOARD_PASSWORD=dashboard-password
+```
+
+Those dashboard credentials are visible to anyone who opens the web app, so
+they must have subscribe-only access to one non-sensitive pond topic. For a
+production deployment, omit them and configure
+`VITE_MQTT_CREDENTIAL_ENDPOINT=https://api.example.com/mqtt/credentials`
+instead. That endpoint must verify the caller's Firebase ID token and return
+short-lived `{ "username": "...", "password": "..." }` credentials restricted
+to that farmer's pond topic.
+
 For Wokwi Wi-Fi:
 
 ```text

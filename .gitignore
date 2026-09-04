@@ -1,5 +1,6 @@
 web/.env
 iot/secrets.h
+iot/mqtt_ca.h
 
 .pio/
 node_modules/

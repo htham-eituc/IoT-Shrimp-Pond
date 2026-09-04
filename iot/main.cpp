@@ -7,6 +7,7 @@
 #include "src/display.h"
 #include "src/firebase_client.h"
 #include "src/hardware.h"
+#include "src/mqtt_client.h"
 #include "src/sensors.h"
 #include "src/types.h"
 
@@ -29,9 +30,11 @@ void setup() {
   setupDisplays();
   connectWiFi();
   setupFirebase();
+  setupMqtt();
 }
 
 void loop() {
+  mqttLoop();
   if (!firebaseReady()) {
     delay(500);
     return;
@@ -83,5 +86,6 @@ void loop() {
   }
 
   uploadState(sensors, currentDevices, status, currentMode, currentSettings);
+  publishSensorSnapshot(sensors, currentTimestampMs());
   updateDisplays(sensors, currentDevices, status, currentMode, simulation);
 }

@@ -105,37 +105,34 @@ function getMetricTone(
   if (!settings) return "info";
 
   if (key === "do") {
-    if (sensors.do <= settings.thresholds.do.critical) return "critical";
+    if (sensors.do < settings.thresholds.do.critical) return "critical";
     if (sensors.do < settings.thresholds.do.hypoxia) return "warning";
     if (sensors.do < settings.thresholds.do.normalMin) return "warning";
     return "normal";
   }
 
   if (key === "waterLevel") {
-    if (sensors.rain && sensors.waterLevel > settings.thresholds.waterLevel.warningHigh) return "critical";
-    if (
-      sensors.waterLevel < settings.thresholds.waterLevel.normalMin ||
-      sensors.waterLevel > settings.thresholds.waterLevel.normalMax
-    ) return "warning";
+    if (sensors.waterLevel > settings.thresholds.waterLevel.criticalHigh) return "critical";
+    if (sensors.waterLevel > settings.thresholds.waterLevel.warningHigh) return "warning";
     return "normal";
   }
 
   if (key === "temperature") {
-    if (
-      sensors.temperature < settings.thresholds.temperature.warningLow ||
-      sensors.temperature > settings.thresholds.temperature.warningHigh
-    ) return "warning";
+    if (sensors.temperature > settings.thresholds.temperature.criticalHigh &&
+        sensors.salinity > settings.thresholds.salinity.criticalHigh) return "critical";
+    if (sensors.temperature > settings.thresholds.temperature.warningHigh) return "warning";
     return "normal";
   }
 
   if (key === "salinity") {
-    if (sensors.salinity < settings.thresholds.salinity.warningLow || sensors.salinity > settings.thresholds.salinity.warningHigh) {
-      return "warning";
-    }
+    if (sensors.temperature > settings.thresholds.temperature.criticalHigh &&
+        sensors.salinity > settings.thresholds.salinity.criticalHigh) return "critical";
+    if (sensors.salinity > settings.thresholds.salinity.warningHigh) return "warning";
     return "normal";
   }
 
   if (key === "ph") {
+    if (sensors.ph < settings.thresholds.ph.criticalLow || sensors.ph > settings.thresholds.ph.criticalHigh) return "critical";
     if (sensors.ph < settings.thresholds.ph.warningLow || sensors.ph > settings.thresholds.ph.warningHigh) return "warning";
     return "normal";
   }
@@ -147,9 +144,9 @@ function getMetricTone(
 export function alertAffectsMetric(alert: PondAlert, key: SensorMetricKey): boolean {
   const type = alert.type.toLowerCase().replaceAll("_", "-");
   if (type === "hypoxia" || type.endsWith("-do")) return key === "do";
-  if (type === "rain-overflow") return key === "rain" || key === "waterLevel";
+  if (type.includes("rain")) return key === "rain" || key === "waterLevel";
   if (type.includes("water-level")) return key === "waterLevel";
-  if (type === "heat-salinity") return key === "temperature" || key === "salinity";
+  if (type.includes("heat-salinity")) return key === "temperature" || key === "salinity";
   if (type.includes("temperature")) return key === "temperature";
   if (type.endsWith("-ph")) return key === "ph";
   const measuredKeys = Object.keys(alert.measurements ?? {});

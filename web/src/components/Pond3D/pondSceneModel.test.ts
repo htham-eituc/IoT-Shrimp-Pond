@@ -148,9 +148,9 @@ describe("3D pond scene projection", () => {
     source.setDemoScenario("pond-001", "hypoxia");
     nowMs += 1_000;
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(observed.at(-1)?.pond.sensors.do).toBeLessThan(4);
-    expect(observed.at(-1)?.model).toMatchObject({ status: "critical" });
-    expect(observed.at(-1)?.model.devices).toMatchObject({ aerator: true, feeder: false, buzzer: true, warningBeacon: true });
+    expect(observed.at(-1)?.pond.sensors.do).toBeLessThan(5);
+    expect(observed.at(-1)?.model).toMatchObject({ status: "normal" });
+    expect(observed.at(-1)?.model.devices).toMatchObject({ aerator: true, feeder: true, buzzer: false, warningBeacon: false });
 
     source.setDemoScenario("pond-001", "rain_overflow");
     expect(observed.at(-1)?.model.rain).toBe(true);

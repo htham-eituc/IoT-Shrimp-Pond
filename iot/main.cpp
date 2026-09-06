@@ -20,7 +20,7 @@ String currentMode = "automatic";
 DeviceState currentDevices = {false, false, false, false, false, false};
 SimulationControl simulation = {false, "normal", "initial"};
 PondSettings currentSettings = {
-  {{7.2f, 8.8f}, {5.0f, 4.5f, 3.5f, 5.5f}, {0.0f, 33.0f}, {0.0f, 30.0f}, {0.0f, 80.0f}},
+  {{7.2f, 8.8f, 6.8f, 9.0f}, {5.0f, 4.5f, 3.5f, 5.5f}, {0.0f, 33.0f, 35.0f}, {0.0f, 30.0f, 35.0f}, {0.0f, 80.0f, 90.0f}},
   {true, true, true},
 };
 

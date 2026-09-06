@@ -9,6 +9,8 @@ export type SettingsValidationErrorCode =
   | "warningLowOrder"
   | "normalRangeOrder"
   | "warningHighOrder"
+  | "criticalLowOrder"
+  | "criticalHighOrder"
   | "finiteNumber"
   | "minimum"
   | "maximum";
@@ -24,6 +26,10 @@ export function validatePondSettings(settings: PondSettings): SettingsValidation
   const errors: SettingsValidationErrors = {};
 
   validateRange(errors, "thresholds.ph", settings.thresholds.ph, 0, 14);
+  validateNumber(errors, "thresholds.ph.criticalLow", settings.thresholds.ph.criticalLow, 0, 14);
+  if (settings.thresholds.ph.criticalLow > settings.thresholds.ph.warningLow) {
+    errors["thresholds.ph.criticalLow"] = { code: "criticalLowOrder" };
+  }
   validateRange(errors, "thresholds.temperature", settings.thresholds.temperature, 0, 60);
   validateRange(errors, "thresholds.salinity", settings.thresholds.salinity, 0, 60);
   validateRange(errors, "thresholds.waterLevel", settings.thresholds.waterLevel, 0, 100);
@@ -71,7 +77,7 @@ function validateRange(
   minimum: number,
   maximum: number,
 ): void {
-  for (const field of ["normalMin", "normalMax", "warningLow", "warningHigh"] as const) {
+  for (const field of ["normalMin", "normalMax", "warningLow", "warningHigh", "criticalHigh"] as const) {
     validateNumber(errors, `${path}.${field}`, settings[field], minimum, maximum);
   }
 
@@ -83,6 +89,9 @@ function validateRange(
   }
   if (settings.normalMax > settings.warningHigh) {
     errors[`${path}.warningHigh`] = { code: "warningHighOrder" };
+  }
+  if (settings.warningHigh > settings.criticalHigh) {
+    errors[`${path}.criticalHigh`] = { code: "criticalHighOrder" };
   }
 }
 

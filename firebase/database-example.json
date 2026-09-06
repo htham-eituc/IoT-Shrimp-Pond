@@ -16,7 +16,7 @@
   "ponds": {
     "pond-001": {
       "name": "Smart Shrimp Pond 001",
-      "status": "critical",
+      "status": "warning",
       "connected": true,
       "lastSeenMs": 1786200100000,
 
@@ -35,7 +35,7 @@
         "drainagePump": false,
         "dilutionPump": false,
         "feeder": false,
-        "buzzer": true,
+        "buzzer": false,
         "warningBeacon": true
       }
     }
@@ -49,13 +49,15 @@
         "ph": {
           "normalMin": 7.5,
           "normalMax": 8.5,
-          "warningLow": 7.5,
-          "warningHigh": 8.8
+          "warningLow": 7.2,
+          "warningHigh": 8.8,
+          "criticalLow": 6.8,
+          "criticalHigh": 9.0
         },
 
         "do": {
           "normalMin": 5.0,
-          "hypoxia": 4.0,
+          "hypoxia": 4.5,
           "critical": 3.5,
           "recovery": 5.5,
           "triggerDurationSec": 30
@@ -65,21 +67,24 @@
           "normalMin": 28,
           "normalMax": 32,
           "warningLow": 25,
-          "warningHigh": 33
+          "warningHigh": 33,
+          "criticalHigh": 35
         },
 
         "salinity": {
           "normalMin": 10,
           "normalMax": 25,
           "warningLow": 5,
-          "warningHigh": 30
+          "warningHigh": 30,
+          "criticalHigh": 35
         },
 
         "waterLevel": {
           "normalMin": 40,
           "normalMax": 80,
           "warningLow": 30,
-          "warningHigh": 90,
+          "warningHigh": 80,
+          "criticalHigh": 90,
           "overflowTriggerDurationSec": 10
         }
       },
@@ -124,7 +129,7 @@
     "pond-001": {
       "alert-001": {
         "type": "hypoxia",
-        "severity": "critical",
+        "severity": "warning",
         "status": "active",
         "message": "DO remained below 4.0 mg/L for 30 seconds.",
 

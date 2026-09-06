@@ -28,6 +28,16 @@ bool getSettingNumber(FirebaseJson &json, const char *path, float &value) {
   return isfinite(value);
 }
 
+bool getSettingNumberOrDefault(FirebaseJson &json, const char *path, float &value, float fallback) {
+  FirebaseJsonData data;
+  if (!json.get(data, path) || !data.success) {
+    value = fallback;
+    return true;
+  }
+  value = data.to<float>();
+  return isfinite(value);
+}
+
 bool getSettingBool(FirebaseJson &json, const char *path, bool &value) {
   FirebaseJsonData data;
   if (!json.get(data, path) || !data.success) return false;
@@ -35,10 +45,19 @@ bool getSettingBool(FirebaseJson &json, const char *path, bool &value) {
   return true;
 }
 
-bool getRangeThreshold(FirebaseJson &json, const char *path, RangeThreshold &threshold) {
+bool getRangeThreshold(FirebaseJson &json, const char *path, RangeThreshold &threshold, float criticalHighFallback) {
   return getSettingNumber(json, (String(path) + "/warningLow").c_str(), threshold.warningLow) &&
          getSettingNumber(json, (String(path) + "/warningHigh").c_str(), threshold.warningHigh) &&
-         threshold.warningLow <= threshold.warningHigh;
+         getSettingNumberOrDefault(json, (String(path) + "/criticalHigh").c_str(), threshold.criticalHigh, criticalHighFallback) &&
+         threshold.warningLow <= threshold.warningHigh && threshold.warningHigh <= threshold.criticalHigh;
+}
+
+bool getPhThreshold(FirebaseJson &json, PhThreshold &threshold) {
+  return getSettingNumber(json, "thresholds/ph/warningLow", threshold.warningLow) &&
+         getSettingNumber(json, "thresholds/ph/warningHigh", threshold.warningHigh) &&
+         getSettingNumberOrDefault(json, "thresholds/ph/criticalLow", threshold.criticalLow, 6.8f) &&
+         getSettingNumberOrDefault(json, "thresholds/ph/criticalHigh", threshold.criticalHigh, 9.0f) &&
+         threshold.criticalLow <= threshold.warningLow && threshold.warningHigh <= threshold.criticalHigh;
 }
 
 }
@@ -68,14 +87,14 @@ bool refreshPondSettings(String &currentMode, PondSettings &settings) {
   PondSettings next = settings;
   String mode;
   if (!getCommandString(*json, "mode", mode) || (mode != "automatic" && mode != "manual") ||
-      !getRangeThreshold(*json, "thresholds/ph", next.thresholds.ph) ||
+      !getPhThreshold(*json, next.thresholds.ph) ||
       !getSettingNumber(*json, "thresholds/do/normalMin", next.thresholds.dissolvedOxygen.normalMin) ||
       !getSettingNumber(*json, "thresholds/do/hypoxia", next.thresholds.dissolvedOxygen.hypoxia) ||
       !getSettingNumber(*json, "thresholds/do/critical", next.thresholds.dissolvedOxygen.critical) ||
       !getSettingNumber(*json, "thresholds/do/recovery", next.thresholds.dissolvedOxygen.recovery) ||
-      !getRangeThreshold(*json, "thresholds/temperature", next.thresholds.temperature) ||
-      !getRangeThreshold(*json, "thresholds/salinity", next.thresholds.salinity) ||
-      !getRangeThreshold(*json, "thresholds/waterLevel", next.thresholds.waterLevel) ||
+      !getRangeThreshold(*json, "thresholds/temperature", next.thresholds.temperature, 35.0f) ||
+      !getRangeThreshold(*json, "thresholds/salinity", next.thresholds.salinity, 35.0f) ||
+      !getRangeThreshold(*json, "thresholds/waterLevel", next.thresholds.waterLevel, 90.0f) ||
       !getSettingBool(*json, "automation/hypoxiaResponseEnabled", next.automation.hypoxiaResponseEnabled) ||
       !getSettingBool(*json, "automation/rainOverflowResponseEnabled", next.automation.rainOverflowResponseEnabled) ||
       !getSettingBool(*json, "automation/heatSalinityResponseEnabled", next.automation.heatSalinityResponseEnabled) ||

@@ -123,7 +123,7 @@ export class MockIoTController {
     }
 
     this.evolveEnvironment(environment, pond.devices, deltaSec);
-    this.publishEnvironmentToPond(pond, environment);
+    this.publishEnvironmentToPond(pondId, pond, environment);
 
     if (automaticMode) {
       this.applyAutomation(pondId, pond, environment);
@@ -201,7 +201,7 @@ export class MockIoTController {
       pond.devices.warningBeacon = true;
       this.ensureAlert(pondId, "hypoxia", {
         type: "hypoxia",
-        severity: "critical",
+        severity: environment.do < thresholds.do.critical ? "critical" : "warning",
         status: "active",
         message: "DO is below the configured hypoxia threshold; aeration response is active.",
         measurements: { do: round(environment.do, 2) },
@@ -217,7 +217,7 @@ export class MockIoTController {
       pond.devices.aerator = true;
       this.ensureAlert(pondId, "rain_overflow", {
         type: "rain_overflow",
-        severity: "critical",
+        severity: environment.waterLevel > thresholds.waterLevel.criticalHigh ? "critical" : "warning",
         status: "active",
         message: "Rainfall is raising the pond above the overflow threshold; drainage response is active.",
         measurements: { rain: true, waterLevel: round(environment.waterLevel, 1), ph: round(environment.ph, 2) },
@@ -234,7 +234,9 @@ export class MockIoTController {
       pond.devices.feeder = false;
       this.ensureAlert(pondId, "heat_salinity", {
         type: "heat_salinity",
-        severity: "warning",
+        severity: environment.temperature > thresholds.temperature.criticalHigh && environment.salinity > thresholds.salinity.criticalHigh
+          ? "critical"
+          : "warning",
         status: "active",
         message: "Temperature and salinity are above configured limits; dilution response is active.",
         measurements: { temperature: round(environment.temperature, 2), salinity: round(environment.salinity, 2) },
@@ -265,18 +267,22 @@ export class MockIoTController {
         pond.devices.feeder = true;
       }
     }
+
+    pond.devices.buzzer = pond.status === "critical";
+    pond.devices.warningBeacon = pond.status !== "normal";
   }
 
-  private publishEnvironmentToPond(pond: PondState, environment: EnvironmentState): void {
-    const hypoxiaActive = environment.do < 4;
-    const rainOverflowActive = this.isRaining(environment) && environment.waterLevel > 90;
-    const heatSalinityActive = environment.temperature > 33 && environment.salinity > 30;
-    const warningActive = environment.do < 5
-      || environment.waterLevel > 80
-      || environment.temperature > 32
-      || environment.salinity > 25
-      || environment.ph < 7.5
-      || environment.ph > 8.5;
+  private publishEnvironmentToPond(pondId: string, pond: PondState, environment: EnvironmentState): void {
+    const thresholds = this.database.settings[pondId]?.thresholds;
+    if (!thresholds) return;
+    const criticalActive = environment.do < thresholds.do.critical ||
+      environment.waterLevel > thresholds.waterLevel.criticalHigh ||
+      environment.ph < thresholds.ph.criticalLow || environment.ph > thresholds.ph.criticalHigh ||
+      (environment.temperature > thresholds.temperature.criticalHigh && environment.salinity > thresholds.salinity.criticalHigh);
+    const warningActive = environment.do < thresholds.do.hypoxia || environment.waterLevel > thresholds.waterLevel.warningHigh ||
+      this.isRaining(environment) || environment.temperature > thresholds.temperature.warningHigh ||
+      environment.salinity > thresholds.salinity.warningHigh || environment.ph < thresholds.ph.warningLow ||
+      environment.ph > thresholds.ph.warningHigh;
 
     pond.sensors = {
       ph: round(environment.ph, 2),
@@ -287,7 +293,7 @@ export class MockIoTController {
       ec: round(environment.salinity * SIMULATION_CONFIG.telemetry.salinityToEcMultiplier + SIMULATION_CONFIG.telemetry.salinityToEcOffset, 2),
       salinity: round(environment.salinity, 2),
     };
-    pond.status = hypoxiaActive || rainOverflowActive ? "critical" : heatSalinityActive || warningActive ? "warning" : "normal";
+    pond.status = criticalActive ? "critical" : warningActive ? "warning" : "normal";
   }
 
   private applyScenarioInitialConditions(environment: EnvironmentState, scenario: DemoScenario): void {
@@ -354,6 +360,7 @@ export class MockIoTController {
       (candidate) => candidate.type === alertType && candidate.status === "active",
     );
     if (existing) {
+      existing.severity = alert.severity;
       existing.measurements = alert.measurements;
       existing.message = alert.message;
       return;

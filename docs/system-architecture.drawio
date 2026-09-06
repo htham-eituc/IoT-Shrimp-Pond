@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-09-06T10:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="smart-shrimp-pond-architecture" name="System Architecture">
+    <mxGraphModel dx="2560" dy="1500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2560" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Smart Shrimp Pond – System Architecture and Communication Protocols" style="text;html=1;align=center;verticalAlign=middle;fontSize=30;fontStyle=1;fontColor=#16324F;" vertex="1" parent="1">
+          <mxGeometry x="20" y="15" width="2500" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="protocol-note" value="Multiple communication mechanisms are used. Every connection label identifies the verified protocol, API, listener, trigger, or local hardware mechanism; there is no generic “Internet” link." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#D6B656;fontColor=#5D4037;fontSize=15;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="260" y="70" width="2040" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="zone-device" value="1  POND AND DEVICE LAYER" style="swimlane;horizontal=1;startSize=38;rounded=1;html=1;fillColor=#EAF4FF;swimlaneFillColor=#F7FBFF;strokeColor=#6C9BCF;fontColor=#16324F;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="140" width="620" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="zone-comm" value="2  COMMUNICATION AND BACKEND SERVICES" style="swimlane;horizontal=1;startSize=38;rounded=1;html=1;fillColor=#F1ECFA;swimlaneFillColor=#FBF9FE;strokeColor=#9673A6;fontColor=#3F2750;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="140" width="430" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="zone-firebase" value="3  FIREBASE SERVICES" style="swimlane;horizontal=1;startSize=38;rounded=1;html=1;fillColor=#FFF3E0;swimlaneFillColor=#FFFBF5;strokeColor=#D79B00;fontColor=#633C00;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="140" width="500" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="zone-web" value="4  WEB APPLICATION" style="swimlane;horizontal=1;startSize=38;rounded=1;html=1;fillColor=#E8F5E9;swimlaneFillColor=#F8FFF9;strokeColor=#82B366;fontColor=#234D20;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1630" y="140" width="470" height="690" as="geometry" />
+        </mxCell>
+        <mxCell id="zone-external" value="5  EXTERNAL NOTIFICATION SERVICES" style="swimlane;horizontal=1;startSize=38;rounded=1;html=1;fillColor=#FCE8EC;swimlaneFillColor=#FFF8FA;strokeColor=#B85450;fontColor=#6D1F28;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1630" y="850" width="470" height="410" as="geometry" />
+        </mxCell>
+        <mxCell id="zone-users" value="6  USERS" style="swimlane;horizontal=1;startSize=38;rounded=1;html=1;fillColor=#E0F7FA;swimlaneFillColor=#F6FEFF;strokeColor=#4BA3AF;fontColor=#174A51;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="2120" y="140" width="400" height="1120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sensors" value="&lt;b&gt;Pond sensors / Wokwi inputs&lt;/b&gt;&lt;br&gt;&lt;br&gt;pH potentiometer — ADC GPIO 34&lt;br&gt;Dissolved oxygen potentiometer — ADC GPIO 35&lt;br&gt;Temperature potentiometer — ADC GPIO 32&lt;br&gt;Water level potentiometer — ADC GPIO 33&lt;br&gt;Salinity potentiometer — ADC GPIO 36&lt;br&gt;Rain switch — digital GPIO 25&lt;br&gt;&lt;br&gt;&lt;i&gt;EC is derived in firmware from salinity; no separate EC input is wired.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9EAF7;strokeColor=#1565C0;strokeWidth=2;fontColor=#102A43;fontSize=14;align=left;spacing=12;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="50" y="220" width="245" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="esp32" value="&lt;b&gt;ESP32 firmware in Wokwi&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Reads simulated sensors every 5 s&lt;br&gt;• Loads Firebase pond settings&lt;br&gt;• statusFor(): normal / warning / critical&lt;br&gt;• Local automatic actuator decisions&lt;br&gt;• Polls and executes manual commands&lt;br&gt;• Writes telemetry, alerts and events&lt;br&gt;• Publishes retained MQTT snapshot&lt;br&gt;&lt;br&gt;&lt;i&gt;Device identity: Firebase device account&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#0D47A1;strokeWidth=3;fontColor=#0D2B45;fontSize=15;align=left;spacing=12;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="335" y="250" width="280" height="480" as="geometry" />
+        </mxCell>
+        <mxCell id="actuators" value="&lt;b&gt;Pond actuators&lt;/b&gt;&lt;br&gt;&lt;i&gt;represented by Wokwi LEDs&lt;/i&gt;&lt;br&gt;&lt;br&gt;Aerator — GPIO 16&lt;br&gt;Drainage pump — GPIO 17&lt;br&gt;Dilution pump — GPIO 18&lt;br&gt;Feeder — GPIO 19&lt;br&gt;Buzzer — GPIO 21&lt;br&gt;Warning beacon — GPIO 22" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=2;fontColor=#5A3500;fontSize=14;align=left;spacing=12;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="50" y="790" width="245" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="local-display" value="&lt;b&gt;Local indicators&lt;/b&gt;&lt;br&gt;&lt;br&gt;Sensor LCD 0x27 + status LCD 0x3F&lt;br&gt;I²C SDA 26 / SCL 27&lt;br&gt;OK / WARN / CRIT LEDs — GPIO 13–15&lt;br&gt;Serial monitor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0288D1;strokeWidth=2;fontColor=#134B63;fontSize=14;align=left;spacing=12;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="335" y="830" width="280" height="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mqtt-broker" value="&lt;b&gt;HiveMQ Cloud Serverless MQTT broker&lt;/b&gt;&lt;br&gt;&lt;br&gt;b0de13b93b8a4d638b7b8e24d705f789&lt;br&gt;.s1.eu.hivemq.cloud&lt;br&gt;&lt;br&gt;Device: TLS MQTT :8883&lt;br&gt;Browser: WSS :8884/mqtt&lt;br&gt;&lt;br&gt;Pond-scoped retained sensor messages" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#7B1FA2;strokeWidth=3;fontColor=#3C1748;fontSize=14;align=center;spacing=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="210" width="350" height="235" as="geometry" />
+        </mxCell>
+        <mxCell id="configuration" value="&lt;b&gt;Build-time connection configuration&lt;/b&gt;&lt;br&gt;&lt;b&gt;ESP32:&lt;/b&gt; secrets.h + mqtt_ca.h — Firebase device login, MQTT device credentials, TLS CA&lt;br&gt;&lt;b&gt;Web:&lt;/b&gt; .env — Firebase config, Gmail client ID, WSS URL, static subscribe-only MQTT credentials&lt;br&gt;&lt;i&gt;Optional HTTPS credential client exists, but endpoint is empty and no server is present.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#8E44AD;strokeWidth=2;fontColor=#43204F;fontSize=12;align=left;spacing=10;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="700" y="985" width="350" height="155" as="geometry" />
+        </mxCell>
+        <mxCell id="ntp" value="&lt;b&gt;Public time services&lt;/b&gt;&lt;br&gt;pool.ntp.org&lt;br&gt;time.nist.gov&lt;br&gt;&lt;br&gt;Used by configTime() before timestamped uploads" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="1155" width="350" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="firebase-auth" value="&lt;b&gt;Firebase Authentication&lt;/b&gt;&lt;br&gt;&lt;br&gt;Email/password sign-in&lt;br&gt;Separate farmer and device accounts&lt;br&gt;Firebase ID tokens" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#EF6C00;strokeWidth=3;fontColor=#5B2D00;fontSize=15;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="210" width="420" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="firebase-rules" value="&lt;b&gt;Realtime Database Security Rules&lt;/b&gt;&lt;br&gt;database.rules.json&lt;br&gt;Auth UID → /users/{uid} → role + pondId scope&lt;br&gt;Farmer/device write permissions enforced" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;strokeWidth=2;fontColor=#5A4700;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="405" width="420" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rtdb" value="&lt;b&gt;Firebase Realtime Database&lt;/b&gt;&lt;br&gt;&lt;br&gt;/users/{uid}&lt;br&gt;/ponds/{pondId}/sensors&lt;br&gt;/ponds/{pondId}/devices&lt;br&gt;/ponds/{pondId}/status&lt;br&gt;/ponds/{pondId}/connected + lastSeenMs&lt;br&gt;/settings/{pondId}&lt;br&gt;/commands/{pondId}/{commandId}&lt;br&gt;/telemetry/{pondId}/slot-{NNN}&lt;br&gt;/alerts/{pondId}/alert-{timestampMs}&lt;br&gt;/events/{pondId}/event-…&lt;br&gt;/simulation/{pondId}/control | state" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FFE6CC;strokeColor=#D36B00;strokeWidth=3;fontColor=#4D2A00;fontSize=14;align=left;spacingLeft=24;spacingRight=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="565" width="350" height="410" as="geometry" />
+        </mxCell>
+        <mxCell id="cloud-functions" value="&lt;b&gt;Firebase Cloud Functions&lt;/b&gt;&lt;br&gt;&lt;br&gt;NOT IMPLEMENTED IN REPOSITORY&lt;br&gt;No functions/ source, firebase.json, deployment config, RTDB trigger, or critical-alert function was found.&lt;br&gt;&lt;br&gt;Email is sent by the browser, not by a Cloud Function." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEEEEE;strokeColor=#9E9E9E;strokeWidth=2;dashed=1;fontColor=#616161;fontSize=13;align=center;spacing=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="1025" width="420" height="175" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dashboard" value="&lt;b&gt;React + Vite web dashboard&lt;/b&gt;&lt;br&gt;&lt;i&gt;Runs in the authenticated farmer’s browser&lt;/i&gt;&lt;br&gt;&lt;br&gt;• FirebaseAuthSource + /users/{uid} farmer authorization&lt;br&gt;• FirebasePondDataSource onValue listeners&lt;br&gt;• Initial bounded telemetry query (last 24)&lt;br&gt;• MQTT live-sensor overlay; 15 s stale fallback to Firebase&lt;br&gt;• Manual commands and settings/simulation writes&lt;br&gt;• Command/device feedback display&lt;br&gt;• Critical-alert listener + GmailAlertNotifier&lt;br&gt;• LocalStorage remembers sent alert IDs&lt;br&gt;&lt;br&gt;&lt;b&gt;Active MQTT credential mode:&lt;/b&gt;&lt;br&gt;Vite-bundled subscribe-only username/password" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;strokeWidth=3;fontColor=#173F19;fontSize=14;align=left;spacing=12;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1750" y="215" width="310" height="565" as="geometry" />
+        </mxCell>
+
+        <mxCell id="google-identity" value="&lt;b&gt;Google Identity Services&lt;/b&gt;&lt;br&gt;https://accounts.google.com/gsi/client&lt;br&gt;OAuth 2 scope: gmail.send" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8D7DA;strokeColor=#B85450;strokeWidth=2;fontColor=#661D24;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1670" y="910" width="390" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="gmail-api" value="&lt;b&gt;Gmail API / Gmail service&lt;/b&gt;&lt;br&gt;POST https://gmail.googleapis.com/&lt;br&gt;gmail/v1/users/me/messages/send&lt;br&gt;&lt;br&gt;Bearer OAuth access token; no SMTP client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F4CCCC;strokeColor=#C62828;strokeWidth=3;fontColor=#641414;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1670" y="1060" width="390" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="farmer" value="&lt;b&gt;Farmer / pond operator&lt;/b&gt;&lt;br&gt;&lt;br&gt;Uses a browser to sign in, view live and historical readings, configure thresholds and automation, switch mode, issue manual commands, run Wokwi scenarios, resolve alerts, and authorize Gmail sending." style="shape=actor;whiteSpace=wrap;html=1;fillColor=#B2EBF2;strokeColor=#00838F;strokeWidth=3;fontColor=#083E43;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2165" y="270" width="310" height="275" as="geometry" />
+        </mxCell>
+        <mxCell id="email-inbox" value="&lt;b&gt;Farmer email inbox&lt;/b&gt;&lt;br&gt;&lt;br&gt;Recipient is the authenticated Firebase user’s email address." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5F5F6;strokeColor=#00838F;strokeWidth=2;fontColor=#174A51;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2165" y="1015" width="310" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-sensors-esp" value="Sample sensors • ADC/GPIO local wiring" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1976D2;strokeWidth=3;endArrow=block;endFill=1;fontColor=#0D47A1;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sensors" target="esp32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-esp-actuators" value="Automatic/manual actuation • GPIO local control" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F57C00;strokeWidth=3;endArrow=block;endFill=1;fontColor=#A64700;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="actuators">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="320" y="750" /><mxPoint x="320" y="940" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-esp-display" value="Local display • I²C + GPIO" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1976D2;strokeWidth=3;endArrow=block;endFill=1;fontColor=#0D47A1;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="local-display">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-esp-mqtt" value="Publish retained sensors • MQTT over TLS :8883 via Wi‑Fi&lt;br&gt;shrimp-pond/v1/ponds/{pondId}/sensors" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1976D2;strokeWidth=3;endArrow=block;endFill=1;fontColor=#0D47A1;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="mqtt-broker">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-mqtt-dashboard" value="Live sensor subscription • MQTT over WSS :8884/mqtt • pond topic" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1976D2;strokeWidth=3;endArrow=block;endFill=1;fontColor=#0D47A1;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="mqtt-broker" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1070" y="185" /><mxPoint x="1645" y="185" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-config-esp" value="Compile-time device credentials + TLS CA" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;endArrow=block;endFill=1;fontColor=#6A1B9A;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="configuration" target="esp32">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="675" y="1060" /><mxPoint x="630" y="1060" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-config-web" value="Vite env • Firebase/Gmail config + static MQTT subscriber credential" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;endArrow=block;endFill=1;fontColor=#6A1B9A;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="configuration" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1070" y="1225" /><mxPoint x="1640" y="1225" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-ntp-esp" value="Timestamp synchronization&lt;br&gt;NTP via Wi‑Fi (configTime)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=2;dashed=1;dashPattern=1 4;endArrow=block;endFill=1;fontColor=#424242;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ntp" target="esp32">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="670" y="1215" /><mxPoint x="630" y="1215" /></Array></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-device-auth" value="Device sign-in ↔ ID token • Firebase client HTTPS/Wi‑Fi" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;startArrow=block;startFill=1;endArrow=block;endFill=1;fontColor=#6A1B9A;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="firebase-auth">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="650" y="475" /><mxPoint x="1125" y="475" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-rules-rtdb" value="Authorize operation • Auth UID + role/pond rules" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;endArrow=block;endFill=1;fontColor=#6A1B9A;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="firebase-rules" target="rtdb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-esp-data-rtdb" value="Sensor/state + rolling telemetry every 5 s • RTDB HTTPS/Wi‑Fi&lt;br&gt;/ponds/{pondId}/sensors + /telemetry/{pondId}/slot-{NNN}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1976D2;strokeWidth=3;endArrow=block;endFill=1;fontColor=#0D47A1;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="rtdb">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="650" y="555" /><mxPoint x="1125" y="555" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-rtdb-control-esp" value="Settings/simulation sync + command polling • RTDB GET HTTPS/Wi‑Fi&lt;br&gt;/settings/{pondId} • /simulation/{pondId}/control • /commands/{pondId}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F57C00;strokeWidth=3;endArrow=block;endFill=1;fontColor=#A64700;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="rtdb" target="esp32">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1125" y="745" /><mxPoint x="650" y="745" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-esp-feedback-rtdb" value="Actuator/command feedback • RTDB writes HTTPS/Wi‑Fi&lt;br&gt;/ponds/.../devices • /commands/.../status • /events/{pondId}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F57C00;strokeWidth=3;endArrow=block;endFill=1;fontColor=#A64700;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="rtdb">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="650" y="805" /><mxPoint x="1125" y="805" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-esp-alert-rtdb" value="Local warning/critical detection • RTDB HTTPS/Wi‑Fi&lt;br&gt;/alerts/{pondId}/alert-{timestampMs}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#D32F2F;strokeWidth=3;endArrow=block;endFill=1;fontColor=#B71C1C;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="rtdb">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="650" y="880" /><mxPoint x="1125" y="880" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-esp-status-rtdb" value="Heartbeat every 5 s • RTDB HTTPS/Wi‑Fi&lt;br&gt;/ponds/{pondId}/connected=true + lastSeenMs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=2;dashed=1;dashPattern=1 4;endArrow=block;endFill=1;fontColor=#424242;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="esp32" target="rtdb">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="650" y="955" /><mxPoint x="1125" y="955" /></Array></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-web-auth" value="Farmer sign-in ↔ ID token • Firebase Auth SDK/HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;startArrow=block;startFill=1;endArrow=block;endFill=1;fontColor=#6A1B9A;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="dashboard" target="firebase-auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-profile-authz" value="Farmer authorization • Firebase SDK get /users/{uid}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;endArrow=block;endFill=1;fontColor=#6A1B9A;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="rtdb" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1530" y="535" /><mxPoint x="1720" y="535" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-rtdb-web-data" value="Initial + real-time state • Firebase listeners SDK HTTPS/WebSocket&lt;br&gt;onValue /ponds, /settings, /events • get /telemetry limit 24" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1976D2;strokeWidth=3;endArrow=block;endFill=1;fontColor=#0D47A1;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="rtdb" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1530" y="600" /><mxPoint x="1720" y="600" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-web-rtdb-control" value="Commands/settings/simulation/alert resolution • Firebase SDK HTTPS&lt;br&gt;/commands/{pondId} • /settings/{pondId} • /simulation/{pondId}/control • /alerts/{pondId}/{alertId}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F57C00;strokeWidth=3;endArrow=block;endFill=1;fontColor=#A64700;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="dashboard" target="rtdb">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1720" y="670" /><mxPoint x="1530" y="670" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-rtdb-web-feedback" value="Command/device feedback • onValue /commands/{pondId} + /ponds/{pondId}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F57C00;strokeWidth=3;endArrow=block;endFill=1;fontColor=#A64700;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="rtdb" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1530" y="725" /><mxPoint x="1720" y="725" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-rtdb-web-alert" value="Alert stream • Firebase RTDB listener onValue /alerts/{pondId}" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#D32F2F;strokeWidth=3;endArrow=block;endFill=1;fontColor=#B71C1C;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="rtdb" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1530" y="785" /><mxPoint x="1720" y="785" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-rtdb-web-status" value="Connection display • onValue /ponds/{pondId} • connected boolean&lt;br&gt;No server-side stale/offline detector" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=2;dashed=1;dashPattern=1 4;endArrow=block;endFill=1;fontColor=#424242;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="rtdb" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1530" y="825" /><mxPoint x="1720" y="825" /></Array></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-user-view" value="View dashboard, telemetry, alerts and feedback&lt;br&gt;Browser UI rendering (hosting origin not configured in repo)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1976D2;strokeWidth=3;endArrow=block;endFill=1;fontColor=#0D47A1;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="dashboard" target="farmer">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="2090" y="350" /><mxPoint x="2135" y="350" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-user-control" value="Sign in; configure; issue manual commands; resolve alerts&lt;br&gt;Browser UI actions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F57C00;strokeWidth=3;endArrow=block;endFill=1;fontColor=#A64700;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="farmer" target="dashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="2135" y="500" /><mxPoint x="2090" y="500" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-gmail-oauth" value="User consent ↔ short-lived access token&lt;br&gt;Google OAuth 2 over HTTPS; scope gmail.send" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;startArrow=block;startFill=1;endArrow=block;endFill=1;fontColor=#6A1B9A;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="dashboard" target="google-identity">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-web-gmail" value="Send unsent active critical-alert email&lt;br&gt;Gmail API over HTTPS&lt;br&gt;POST /gmail/v1/users/me/messages/send" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#D32F2F;strokeWidth=3;endArrow=block;endFill=1;fontColor=#B71C1C;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="dashboard" target="gmail-api">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1620" y="820" /><mxPoint x="1620" y="1135" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-gmail-inbox" value="Deliver critical-alert email&lt;br&gt;Gmail service email delivery (application does not use SMTP)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#D32F2F;strokeWidth=3;endArrow=block;endFill=1;fontColor=#B71C1C;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gmail-api" target="email-inbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-title" value="LEGEND" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#263238;" vertex="1" parent="1">
+          <mxGeometry x="35" y="1300" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-blue" value="Solid blue — sensor/data flow" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;strokeWidth=3;fontColor=#0D47A1;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="145" y="1290" width="390" height="48" as="geometry" /></mxCell>
+        <mxCell id="legend-orange" value="Solid orange — control commands" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;strokeWidth=3;fontColor=#A64700;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="550" y="1290" width="390" height="48" as="geometry" /></mxCell>
+        <mxCell id="legend-purple" value="Dashed purple — authentication / credentials" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;strokeWidth=2;dashed=1;dashPattern=6 4;fontColor=#6A1B9A;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="955" y="1290" width="470" height="48" as="geometry" /></mxCell>
+        <mxCell id="legend-red" value="Solid red — alerts / email notifications" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;strokeWidth=3;fontColor=#B71C1C;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1440" y="1290" width="430" height="48" as="geometry" /></mxCell>
+        <mxCell id="legend-gray" value="Dotted gray — status / connection monitoring" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#616161;strokeWidth=2;dashed=1;dashPattern=1 4;fontColor=#424242;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1885" y="1290" width="500" height="48" as="geometry" /></mxCell>
+        <mxCell id="legend-shapes" value="Shapes: blue hardware/simulation • green user-facing app • orange cylinder database • purple/cloud backend • red external notification • gray dashed = explicitly not implemented" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#424242;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="145" y="1355" width="2240" height="52" as="geometry" /></mxCell>
+        <mxCell id="audit-note" value="Verified against the working tree on 2026-09-06. Firebase Hosting, Node-RED, SMTP, a deployed MQTT credential endpoint, and server-side Cloud Functions are absent. The ignored esp32-demo HTTP example is legacy and excluded." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;fontColor=#37474F;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="260" y="1430" width="2040" height="45" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

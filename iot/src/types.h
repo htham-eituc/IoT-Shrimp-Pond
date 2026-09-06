@@ -36,6 +36,14 @@ struct SimulationControl {
 struct RangeThreshold {
   float warningLow;
   float warningHigh;
+  float criticalHigh;
+};
+
+struct PhThreshold {
+  float warningLow;
+  float warningHigh;
+  float criticalLow;
+  float criticalHigh;
 };
 
 struct DissolvedOxygenThreshold {
@@ -46,7 +54,7 @@ struct DissolvedOxygenThreshold {
 };
 
 struct ThresholdSettings {
-  RangeThreshold ph;
+  PhThreshold ph;
   DissolvedOxygenThreshold dissolvedOxygen;
   RangeThreshold temperature;
   RangeThreshold salinity;

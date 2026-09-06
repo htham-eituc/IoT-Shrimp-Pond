@@ -51,6 +51,8 @@ export interface PhThresholdSettings {
   normalMax: number;
   warningLow: number;
   warningHigh: number;
+  criticalLow: number;
+  criticalHigh: number;
 }
 
 export interface DissolvedOxygenThresholdSettings {
@@ -66,6 +68,7 @@ export interface RangeThresholdSettings {
   normalMax: number;
   warningLow: number;
   warningHigh: number;
+  criticalHigh: number;
 }
 
 export interface WaterLevelThresholdSettings extends RangeThresholdSettings {

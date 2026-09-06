@@ -24,7 +24,7 @@ interface ThresholdGroupDefinition {
 const THRESHOLD_GROUPS: ThresholdGroupDefinition[] = [
   {
     key: "ph",
-    fields: rangeFields("", 0, 14, 0.1),
+    fields: [field("criticalLow", "", 0, 14, 0.1), ...rangeFields("", 0, 14, 0.1), field("criticalHigh", "", 0, 14, 0.1)],
   },
   {
     key: "do",
@@ -38,16 +38,17 @@ const THRESHOLD_GROUPS: ThresholdGroupDefinition[] = [
   },
   {
     key: "temperature",
-    fields: rangeFields("°C", 0, 60, 0.1),
+    fields: [...rangeFields("°C", 0, 60, 0.1), field("criticalHigh", "°C", 0, 60, 0.1)],
   },
   {
     key: "salinity",
-    fields: rangeFields("ppt", 0, 60, 0.1),
+    fields: [...rangeFields("ppt", 0, 60, 0.1), field("criticalHigh", "ppt", 0, 60, 0.1)],
   },
   {
     key: "waterLevel",
     fields: [
       ...rangeFields("%", 0, 100, 1),
+      field("criticalHigh", "%", 0, 100, 1),
       field("overflowTriggerDurationSec", "seconds", 0, undefined, 1),
     ],
   },
@@ -280,6 +281,8 @@ function readSettingsForm(formData: FormData, mode: OperatingMode): PondSettings
         normalMax: readNumber(formData, "thresholds.ph.normalMax"),
         warningLow: readNumber(formData, "thresholds.ph.warningLow"),
         warningHigh: readNumber(formData, "thresholds.ph.warningHigh"),
+        criticalLow: readNumber(formData, "thresholds.ph.criticalLow"),
+        criticalHigh: readNumber(formData, "thresholds.ph.criticalHigh"),
       },
       do: {
         normalMin: readNumber(formData, "thresholds.do.normalMin"),
@@ -293,18 +296,21 @@ function readSettingsForm(formData: FormData, mode: OperatingMode): PondSettings
         normalMax: readNumber(formData, "thresholds.temperature.normalMax"),
         warningLow: readNumber(formData, "thresholds.temperature.warningLow"),
         warningHigh: readNumber(formData, "thresholds.temperature.warningHigh"),
+        criticalHigh: readNumber(formData, "thresholds.temperature.criticalHigh"),
       },
       salinity: {
         normalMin: readNumber(formData, "thresholds.salinity.normalMin"),
         normalMax: readNumber(formData, "thresholds.salinity.normalMax"),
         warningLow: readNumber(formData, "thresholds.salinity.warningLow"),
         warningHigh: readNumber(formData, "thresholds.salinity.warningHigh"),
+        criticalHigh: readNumber(formData, "thresholds.salinity.criticalHigh"),
       },
       waterLevel: {
         normalMin: readNumber(formData, "thresholds.waterLevel.normalMin"),
         normalMax: readNumber(formData, "thresholds.waterLevel.normalMax"),
         warningLow: readNumber(formData, "thresholds.waterLevel.warningLow"),
         warningHigh: readNumber(formData, "thresholds.waterLevel.warningHigh"),
+        criticalHigh: readNumber(formData, "thresholds.waterLevel.criticalHigh"),
         overflowTriggerDurationSec: readNumber(formData, "thresholds.waterLevel.overflowTriggerDurationSec"),
       },
     },

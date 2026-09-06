@@ -41,19 +41,26 @@ String activeAlertKeyFor(const SensorReadings &sensors, const String &status, co
   if (sensors.dissolvedOxygen < thresholds.dissolvedOxygen.critical) {
     return "critical-do";
   }
+  if (sensors.waterLevel > thresholds.waterLevel.criticalHigh) {
+    return "critical-water-level";
+  }
+  if (sensors.ph < thresholds.ph.criticalLow || sensors.ph > thresholds.ph.criticalHigh) {
+    return "critical-ph";
+  }
+  if (sensors.temperature > thresholds.temperature.criticalHigh &&
+      sensors.salinity > thresholds.salinity.criticalHigh) {
+    return "critical-heat-salinity";
+  }
   if (sensors.dissolvedOxygen < thresholds.dissolvedOxygen.hypoxia) {
     return "warning-do";
   }
-  if (sensors.rain && sensors.waterLevel > thresholds.waterLevel.warningHigh) {
-    return "warning-rain-overflow";
+  if (sensors.rain) {
+    return "warning-rain";
   }
-  if (sensors.temperature > thresholds.temperature.warningHigh && sensors.salinity > thresholds.salinity.warningHigh) {
-    return "heat-salinity";
-  }
-  if (sensors.temperature < thresholds.temperature.warningLow || sensors.temperature > thresholds.temperature.warningHigh) {
+  if (sensors.temperature > thresholds.temperature.warningHigh) {
     return "warning-temperature";
   }
-  if (sensors.salinity < thresholds.salinity.warningLow || sensors.salinity > thresholds.salinity.warningHigh) {
+  if (sensors.salinity > thresholds.salinity.warningHigh) {
     return "warning-salinity";
   }
   if (sensors.ph < thresholds.ph.warningLow || sensors.ph > thresholds.ph.warningHigh) {
@@ -71,8 +78,17 @@ String alertMessageFor(const String &alertKey) {
   if (alertKey == "warning-do") {
     return "Dissolved oxygen is below the safe range.";
   }
-  if (alertKey == "warning-rain-overflow") {
-    return "Rain and high water level may cause overflow.";
+  if (alertKey == "critical-water-level") {
+    return "Water level is above the configured critical threshold.";
+  }
+  if (alertKey == "critical-ph") {
+    return "pH is outside the configured critical range.";
+  }
+  if (alertKey == "critical-heat-salinity") {
+    return "Water temperature and salinity are both above configured critical thresholds.";
+  }
+  if (alertKey == "warning-rain") {
+    return "Rain is detected.";
   }
   if (alertKey == "warning-temperature") {
     return "Water temperature is outside the configured warning range.";

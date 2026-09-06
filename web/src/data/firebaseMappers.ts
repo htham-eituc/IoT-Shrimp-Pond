@@ -57,7 +57,10 @@ export function parsePondSettings(value: unknown, path = "settings"): PondSettin
   return {
     mode: readEnum(record.mode, ["automatic", "manual"], `${path}.mode`),
     thresholds: {
-      ph: parseRange(ph, `${path}.thresholds.ph`),
+      ph: {
+        ...parseRange(ph, `${path}.thresholds.ph`, 9),
+        criticalLow: readOptionalNumber(ph.criticalLow, `${path}.thresholds.ph.criticalLow`, 6.8, 0, 14),
+      },
       do: {
         normalMin: readNumber(dissolvedOxygen.normalMin, `${path}.thresholds.do.normalMin`),
         hypoxia: readNumber(dissolvedOxygen.hypoxia, `${path}.thresholds.do.hypoxia`),
@@ -65,10 +68,10 @@ export function parsePondSettings(value: unknown, path = "settings"): PondSettin
         recovery: readNumber(dissolvedOxygen.recovery, `${path}.thresholds.do.recovery`),
         triggerDurationSec: readNumber(dissolvedOxygen.triggerDurationSec, `${path}.thresholds.do.triggerDurationSec`, 0),
       },
-      temperature: parseRange(temperature, `${path}.thresholds.temperature`),
-      salinity: parseRange(salinity, `${path}.thresholds.salinity`),
+      temperature: parseRange(temperature, `${path}.thresholds.temperature`, 35),
+      salinity: parseRange(salinity, `${path}.thresholds.salinity`, 35),
       waterLevel: {
-        ...parseRange(waterLevel, `${path}.thresholds.waterLevel`),
+        ...parseRange(waterLevel, `${path}.thresholds.waterLevel`, 90),
         overflowTriggerDurationSec: readNumber(
           waterLevel.overflowTriggerDurationSec,
           `${path}.thresholds.waterLevel.overflowTriggerDurationSec`,
@@ -180,12 +183,13 @@ function parseMeasurements(value: unknown, path: string): Partial<PondSensors> {
   return measurements;
 }
 
-function parseRange(record: Record<string, unknown>, path: string) {
+function parseRange(record: Record<string, unknown>, path: string, criticalHighFallback: number) {
   return {
     normalMin: readNumber(record.normalMin, `${path}.normalMin`),
     normalMax: readNumber(record.normalMax, `${path}.normalMax`),
     warningLow: readNumber(record.warningLow, `${path}.warningLow`),
     warningHigh: readNumber(record.warningHigh, `${path}.warningHigh`),
+    criticalHigh: readOptionalNumber(record.criticalHigh, `${path}.criticalHigh`, criticalHighFallback),
   };
 }
 
@@ -218,6 +222,10 @@ function readNumber(value: unknown, path: string, minimum?: number, maximum?: nu
   if (minimum !== undefined && value < minimum) throw new Error(`${path} must be at least ${minimum}.`);
   if (maximum !== undefined && value > maximum) throw new Error(`${path} must be at most ${maximum}.`);
   return value;
+}
+
+function readOptionalNumber(value: unknown, path: string, fallback: number, minimum?: number, maximum?: number): number {
+  return value === undefined ? fallback : readNumber(value, path, minimum, maximum);
 }
 
 function readNullableTimestamp(value: unknown, path: string): number | null {

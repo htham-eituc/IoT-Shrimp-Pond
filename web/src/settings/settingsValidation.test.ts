@@ -34,4 +34,15 @@ describe("settings contract validation", () => {
     expect(errors).toHaveProperty("thresholds.do.triggerDurationSec");
     expect(errors).toHaveProperty("thresholds.waterLevel.overflowTriggerDurationSec");
   });
+
+  it("rejects critical thresholds that would overlap a warning threshold", () => {
+    const settings = createMockPondDatabase().settings["pond-001"];
+    settings.thresholds.ph.criticalLow = 7.6;
+    settings.thresholds.temperature.criticalHigh = 32;
+
+    const errors = validatePondSettings(settings);
+
+    expect(errors).toHaveProperty("thresholds.ph.criticalLow");
+    expect(errors).toHaveProperty("thresholds.temperature.criticalHigh");
+  });
 });
